@@ -1,2 +1,7 @@
 .DS_Store
 */gtfs
+
+
+# Added by cargo
+
+/target

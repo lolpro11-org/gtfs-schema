@@ -46,6 +46,7 @@ COLUMN_DATA_TYPES=(
     [stops.txt/stop_id]='text PRIMARY KEY'
     [stops.txt/stop_code]='text NULL'
     [stops.txt/stop_name]='text NULL CHECK (location_type >= 0 AND location_type <= 2 AND stop_name IS NOT NULL OR location_type > 2)'
+    [stops.txt/tts_stop_name]='text NULL'
     [stops.txt/stop_desc]='text NULL'
     [stops.txt/stop_lat]='double precision NULL CHECK (location_type >= 0 AND location_type <= 2 AND stop_name IS NOT NULL OR location_type > 2)'
     [stops.txt/stop_lon]='double precision NULL CHECK (location_type >= 0 AND location_type <= 2 AND stop_name IS NOT NULL OR location_type > 2)'
@@ -57,7 +58,7 @@ COLUMN_DATA_TYPES=(
     [stops.txt/wheelchair_boarding]='integer NULL CHECK (wheelchair_boarding >= 0 AND wheelchair_boarding <= 2 OR wheelchair_boarding IS NULL)'
     [stops.txt/level_id]='text NULL REFERENCES levels ON DELETE CASCADE ON UPDATE CASCADE'
     [stops.txt/platform_code]='text NULL'
-    [stops.txt/vehicle_type]='integer NULL'
+    #[stops.txt/vehicle_type]='integer NULL'
 
     [routes.txt/route_id]='text PRIMARY KEY'
     [routes.txt/agency_id]='text NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE'
@@ -69,6 +70,9 @@ COLUMN_DATA_TYPES=(
     [routes.txt/route_color]="text NULL CHECK (route_color ~ \$\$[a-fA-F0-9]{6}\$\$ OR route_color = '')"
     [routes.txt/route_text_color]="text NULL CHECK (route_color ~ \$\$[a-fA-F0-9]{6}\$\$ OR route_color = '')"
     [routes.txt/route_sort_order]='integer NULL CHECK (route_sort_order >= 0)'
+
+    [routes.txt/continuous_pickup]='integer NULL'
+    [routes.txt/continuous_drop_off]='integer NULL'
 
     [trips.txt/route_id]='text NOT NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE'
     [trips.txt/service_id]='text NOT NULL'
@@ -90,6 +94,10 @@ COLUMN_DATA_TYPES=(
     [stop_times.txt/stop_headsign]='text NULL'
     [stop_times.txt/pickup_type]='integer NOT NULL CHECK (pickup_type >= 0 AND pickup_type <= 3)'
     [stop_times.txt/drop_off_type]='integer NOT NULL CHECK (drop_off_type >= 0 AND drop_off_type <= 3)'
+
+    [stop_times.txt/continuous_pickup]='integer NULL'
+    [stop_times.txt/continuous_drop_off]='integer NULL'
+
     [stop_times.txt/shape_dist_traveled]='double precision NULL CHECK (shape_dist_traveled >= 0.0)'
     [stop_times.txt/timepoint]='boolean NULL'
 
@@ -122,6 +130,58 @@ COLUMN_DATA_TYPES=(
     [fare_rules.txt/destination_id]='text NULL'
     [fare_rules.txt/contains_id]='text NULL'
 
+    [timeframes.txt/timeframe_group_id]='text NOT NULL'
+    [timeframes.txt/start_time]='interval NULL'
+    [timeframes.txt/end_time]='interval NULL'
+    [timeframes.txt/service_id]='text NOT NULL REFERENCES calendar ON DELETE CASCADE ON UPDATE CASCADE'
+
+    [fare_media.txt/fare_media_id]='text PRIMARY KEY'
+    [fare_media.txt/fare_media_name]='text NULL'
+    [fare_media.txt/fare_media_type]='integer NOT NULL'
+
+    #fare_media_id is also a primary key
+    [fare_products.txt/fare_product_id]='text PRIMARY KEY'
+    [fare_products.txt/fare_product_name]='text NULL'
+    [fare_products.txt/fare_media_id]='text REFERENCES fare_media ON DELETE CASCADE ON UPDATE CASCADE'
+    [fare_products.txt/amount]='text NOT NULL'
+    [fare_products.txt/currency]='text NOT NULL'
+
+    #"CREATE TABLE fare_leg_rules (
+    #    leg_group_id ID,
+    #    network_id INTEGER REFERENCES routes(network_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #    from_area_id INTEGER REFERENCES areas(area_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #    to_area_id INTEGER REFERENCES areas(area_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #        from_timeframe_group_id INTEGER REFERENCES timeframes(timeframe_group_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #        to_timeframe_group_id INTEGER REFERENCES timeframes(timeframe_group_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #        fare_product_id TEXT REFERENCES fare_products(fare_product_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #        #PRIMARY KEY (leg_group_id, network_id, from_area_id, to_area_id, from_timeframe_group_id, to_timeframe_group_id, fare_product_id)
+    #);"
+    #"CREATE TABLE fare_transfer_rules (
+    #    from_leg_group_id ID REFERENCES fare_leg_rules(leg_group_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #    to_leg_group_id ID REFERENCES fare_leg_rules(leg_group_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #    fare_product_id TEXT REFERENCES fare_products(fare_product_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    #    transfer_count INTEGER CHECK (transfer_count <> 0),
+    #    duration_limit INTEGER,
+    #    duration_limit_type INTEGER,
+    #    fare_transfer_type INTEGER NOT NULL,
+    #    PRIMARY KEY (from_leg_group_id, to_leg_group_id, fare_product_id, transfer_count, duration_limit)
+    #);"
+
+    [areas.txt/area_id]='text PRIMARY KEY'
+    [areas.txt/area_name]='text NULL'
+
+    [stop_areas.txt/area_id]='text NOT NULL REFERENCES areas ON DELETE CASCADE ON UPDATE CASCADE'
+    [stop_areas.txt/stop_id]='text NOT NULL REFERENCES stops ON DELETE CASCADE ON UPDATE CASCADE'
+
+
+    [networks.txt/network_id]='text PRIMARY KEY'
+    [networks.txt/network_name]='text NULL'
+
+    #primary key route_id
+    [route_networks.txt/network_id]='text NOT NULL REFERENCES networks ON DELETE CASCADE ON UPDATE CASCADE'
+    [route_networks.txt/network_name]='text NOT NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE'
+
+    #PRIMARY KEY (shape_id, shape_pt_sequence)
     [shapes.txt/shape_id]='text NOT NULL'
     [shapes.txt/shape_pt_lat]='double precision NOT NULL'
     [shapes.txt/shape_pt_lon]='double precision NOT NULL'
@@ -175,8 +235,20 @@ COLUMN_DATA_TYPES=(
     [translations.txt/language]='text NOT NULL'
     [translations.txt/translation]='text NOT NULL'
     [translations.txt/record_id]='text NULL'
-    [translations.txt/record_sub_id]='text NUll'
+    [translations.txt/record_sub_id]='text NULL'
     [translations.txt/field_value]='text NULL'
+
+    [attributions.txt/attribution_id]='text PRIMARY KEY'
+    [attributions.txt/agency_id]='text NOT NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE'
+    [attributions.txt/route_id]='text NULL REFERENCES routes(route_id) ON DELETE CASCADE ON UPDATE CASCADE'
+    [attributions.txt/trip_id]='text NULL REFERENCES trips(trip_id) ON DELETE CASCADE ON UPDATE CASCADE'
+    [attributions.txt/organization_name]='text NOT NULL'
+    [attributions.txt/is_producer]='integer NULL'
+    [attributions.txt/is_operator]='integer NULL'
+    [attributions.txt/is_authority]='integer NULL'
+    [attributions.txt/attribution_url]='text NULL'
+    [attributions.txt/attribution_email]='text NULL'
+    [attributions.txt/attribution_phone]='text NULL'
 )
 
 MANDATORY_FILES="
@@ -187,12 +259,20 @@ MANDATORY_FILES="
     stop_times.txt
 "
 OPTIONAL_FILES="
+    attributions.txt
     calendar.txt
     calendar_dates.txt
     fare_attributes.txt
     fare_rules.txt
+    fare_media.txt
+    fare_products.txt
+    areas.txt
+    stop_areas.txt
+    networks.txt
+    route_networks.txt
     shapes.txt
     frequencies.txt
+    timeframes.txt
     transfers.txt
     pathways.txt
     levels.txt
