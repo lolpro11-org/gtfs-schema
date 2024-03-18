@@ -1,7 +1,30 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 mod dmfr;
-use gtfs_structures::Gtfs;
+use gtfs_structures::{Availability, BikesAllowedType, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, Transfers};
 use tokio_postgres::{Client, NoTls};
+use serde::{Serialize, Deserialize};
+use serde_json::{json, Value};
+
+#[derive(Serialize)]
+struct GeoJsonProperties {
+    sequence: usize,
+    dist_traveled: Option<f32>,
+}
+
+#[derive(Serialize)]
+struct GeoJsonPoint {
+    #[serde(rename = "type")]
+    type_: String,
+    coordinates: [f64; 2],
+    properties: GeoJsonProperties,
+}
+
+#[derive(Serialize)]
+struct GeoJsonFeatureCollection {
+    #[serde(rename = "type")]
+    type_: String,
+    features: Vec<Value>,
+}
 
 async fn makedb(client: &Client) {
     client.batch_execute("
@@ -229,10 +252,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE shapes (
             shape_id text NOT NULL,
-            shape_pt_lat double precision NOT NULL,
-            shape_pt_lon double precision NOT NULL,
-            shape_pt_sequence integer NOT NULL CHECK (shape_pt_sequence >= 0),
-            shape_dist_traveled double precision NULL CHECK (shape_dist_traveled >= 0.0),
+            shape_geojson JSONB NOT NULL,
             onestop_feed_id text NOT NULL
         );
     ").await.unwrap();
@@ -529,15 +549,337 @@ async fn makedb(client: &Client) {
 
 }
 
-async fn insertgtfs(client: &Client, gtfs: Gtfs) {
+async fn insertgtfs(client: &Client, gtfs: PathBuf) {
+    let onestop_feed_id = gtfs.file_stem().unwrap().to_str().unwrap();
+    let gtfs = Gtfs::from_path(gtfs.as_os_str());
+    if gtfs.is_ok() {
+        let gtfs = gtfs.unwrap();
+        for calendar in gtfs.calendar  {
+            client.execute("
+                INSERT INTO calendar (
+                    service_id,
+                    monday,
+                    tuesday,
+                    wednesday,
+                    thursday,
+                    friday,
+                    saturday,
+                    sunday,
+                    start_date,
+                    end_date,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &calendar.0, 
+                    &calendar.1.monday, 
+                    &calendar.1.tuesday, 
+                    &calendar.1.wednesday, 
+                    &calendar.1.thursday,
+                    &calendar.1.friday, 
+                    &calendar.1.saturday, 
+                    &calendar.1.sunday,
+                    &calendar.1.start_date.format("%Y%m%d").to_string(),
+                    &calendar.1.end_date.format("%Y%m%d").to_string(), 
+                    &onestop_feed_id
+                ],
+            ).await.unwrap();
+        }
+        for calendar_date in gtfs.calendar_dates {
+            for date in calendar_date.1 {
+                client.execute("
+                    INSERT INTO calendar_dates (
+                        service_id,
+                        date,
+                        exception_type,
+                        onestop_feed_id
+                    ) VALUES (
+                        $1, $2, $3, $4
+                    ) ON CONFLICT (onestop_feed_id) do update set;",
+                    &[
+                        &calendar_date.0,
+                        &date.date.format("%Y%m%d").to_string(),
+                        &match date.exception_type {
+                            Exception::Added => "1",
+                            Exception::Deleted => "2",
+                        },
+                        &onestop_feed_id
+                    ]
+                ).await.unwrap();
+            }
+        }
+        for stop in gtfs.stops {
+            client.execute("
+                INSERT INTO stops (
+                    stop_id,
+                    stop_code,
+                    stop_name,
+                    tts_stop_name,
+                    stop_desc,
+                    stop_lat,
+                    stop_lon,
+                    zone_id,
+                    stop_url,
+                    location_type,
+                    parent_station,
+                    stop_timezone,
+                    wheelchair_boarding,
+                    level_id,
+                    platform_code,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &stop.0,
+                    &stop.1.code.clone().unwrap(),
+                    &stop.1.name.clone().unwrap(),
+                    &stop.1.tts_name.clone().unwrap(),
+                    &stop.1.description.clone().unwrap(),
+                    &stop.1.latitude.clone().unwrap(),
+                    &stop.1.longitude.clone().unwrap(),
+                    &stop.1.zone_id.clone().unwrap(),
+                    &stop.1.url.clone().unwrap(),
+                    &match stop.1.location_type.clone() {
+                        LocationType::StopPoint => 0,
+                        LocationType::StopArea => 1,
+                        LocationType::StationEntrance => 2,
+                        LocationType::GenericNode => 3,
+                        LocationType::BoardingArea => 4,
+                        LocationType::Unknown(i) => i,
+                        
+                    },
+                    &stop.1.parent_station.clone().unwrap(),
+                    &stop.1.timezone.clone().unwrap(),
+                    &match stop.1.wheelchair_boarding.clone() {
+                        Availability::InformationNotAvailable => 0,
+                        Availability::Available => 1,
+                        Availability::NotAvailable => 2,
+                        Availability::Unknown(i) => i,
 
+                    },
+                    &stop.1.level_id.clone().unwrap(),
+                    &stop.1.platform_code.clone().unwrap(),
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
+        for trip in gtfs.trips {
+            client.execute("
+                INSERT INTO trips (
+                    route_id,
+                    service_id,
+                    trip_id,
+                    trip_headsign,
+                    trip_short_name,
+                    direction_id,
+                    block_id,
+                    shape_id,
+                    wheelchair_accessible,
+                    bikes_allowed,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &trip.1.route_id,
+                    &trip.1.service_id,
+                    &trip.0,
+                    &trip.1.trip_headsign.unwrap(),
+                    &trip.1.trip_short_name.unwrap(),
+                    &match trip.1.direction_id.unwrap() {
+                        DirectionType::Outbound => 0 as i16,
+                        DirectionType::Inbound => 1 as i16,
+                    },
+                    &trip.1.block_id.unwrap(),
+                    &trip.1.shape_id.unwrap(),
+                    &match trip.1.wheelchair_accessible {
+                        Availability::InformationNotAvailable => 0,
+                        Availability::Available => 1,
+                        Availability::NotAvailable => 2,
+                        Availability::Unknown(i) => i,
+
+                    },
+                    &match trip.1.bikes_allowed {
+                        BikesAllowedType::NoBikeInfo => 0,
+                        BikesAllowedType::AtLeastOneBike => 1,
+                        BikesAllowedType::NoBikesAllowed => 2,
+                        BikesAllowedType::Unknown(i) => i,
+                    },
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
+        for agency in gtfs.agencies {
+            client.execute("
+                CREATE TABLE agency (
+                    agency_id,
+                    agency_name,
+                    agency_url,
+                    agency_timezone,
+                    agency_lang,
+                    agency_phone,
+                    agency_fare_url,
+                    agency_email,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &agency.id.unwrap(),
+                    &agency.name,
+                    &agency.url,
+                    &agency.timezone,
+                    &agency.lang.unwrap(),
+                    &agency.phone.unwrap(),
+                    &agency.fare_url.unwrap(),
+                    &agency.email.unwrap(),
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
+        let mut features = Vec::new();
+        for shapes in gtfs.shapes {
+            let mut current_shape = shapes.1.first().unwrap().id.to_owned();
+            let mut shape_vec = Vec::new();
+            for shape in shapes.1 {
+                if current_shape.to_owned() != shape.id {
+                    features.push((current_shape, GeoJsonFeatureCollection {
+                        type_: "FeatureCollection".to_string(),
+                        features: shape_vec,
+                    }));
+                    shape_vec = Vec::new();
+                    
+                    current_shape = shape.id.to_owned();
+                }
+                let point = GeoJsonPoint {
+                    type_: "Point".to_string(),
+                    coordinates: [shape.longitude, shape.latitude],
+                    properties: GeoJsonProperties {
+                        sequence: shape.sequence,
+                        dist_traveled: shape.dist_traveled,
+                    },
+                };
+                shape_vec.push(json!(point));
+            }
+
+        }
+        for feature in &features {
+            client.execute("
+                INSERT INTO shapes (
+                    shape_id,
+                    shape_geojson,
+                    exception_type,
+                ) VALUES (
+                    $1, $2, $3
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &feature.0,
+                    &serde_json::to_string(&feature.1).unwrap(),
+                    &onestop_feed_id
+                ],
+            ).await.unwrap();
+        }
+        std::mem::drop(features);
+        for fare_attribute in gtfs.fare_attributes {
+            let duration: u32 = fare_attribute.1.transfer_duration.unwrap().try_into().unwrap();
+            client.execute("
+                INSERT INTO fare_attributes (
+                    fare_id,
+                    price,
+                    currency_type,
+                    payment_method,
+                    transfers,
+                    agency_id,
+                    transfer_duration,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &fare_attribute.0,
+                    &fare_attribute.1.price,
+                    &fare_attribute.1.currency,
+                    &match fare_attribute.1.payment_method {
+                        PaymentMethod::Aboard => "0",
+                        PaymentMethod::PreBoarding => "1",
+                    },
+                    &match fare_attribute.1.transfers {
+                        Transfers::Unlimited => i16::MAX,
+                        Transfers::NoTransfer => 0,
+                        Transfers::UniqueTransfer => 1,
+                        Transfers::TwoTransfers => 2,
+                        Transfers::Other(i16) => i16,
+                    },
+                    &fare_attribute.1.agency_id,
+                    &duration,
+                    &onestop_feed_id
+                ],
+            ).await.unwrap();
+        }
+        for fare_rule in gtfs.fare_rules {
+            for rule in fare_rule.1 {
+                client.execute("
+                    INSERT INTO fare_rules (
+                        fare_id,
+                        route_id,
+                        origin_id,
+                        destination_id,
+                        contains_id,
+                        onestop_feed_id
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6
+                    ) ON CONFLICT (onestop_feed_id) do update set;",
+                    &[
+                        &fare_rule.0,
+                        &rule.route_id.unwrap(),
+                        &rule.origin_id.unwrap(),
+                        &rule.destination_id.unwrap(),
+                        &rule.contains_id.unwrap(),
+                        &onestop_feed_id
+                    ],
+                ).await.unwrap();
+            }
+        }
+        for feed_info in gtfs.feed_info {
+            client.execute("
+                CREATE TABLE feed_info (
+                    feed_publisher_name,
+                    feed_publisher_url,
+                    feed_lang,
+                    feed_start_date,
+                    feed_end_date,
+                    feed_version,
+                    feed_contact_email,
+                    feed_contact_url,
+                    default_lang,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+                ) ON CONFLICT (onestop_feed_id) do update set;",
+                &[
+                    &feed_info.name,
+                    &feed_info.url,
+                    &feed_info.lang,
+                    &feed_info.start_date.unwrap().format("%Y%m%d").to_string(),
+                    &feed_info.end_date.unwrap().format("%Y%m%d").to_string(),
+                    &feed_info.version.unwrap(),
+                    &feed_info.contact_email.unwrap(),
+                    &feed_info.contact_url.unwrap(),
+                    &feed_info.default_lang.unwrap(),
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
+    }
 }
 
 #[tokio::main]
 async fn main() {
     let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("/home/lolpro11/Documents/Catenary/catenary-backend/gtfs_static_zips/".to_string());
 
-    let conn_string = "postgresql://lolpro11:lolpro11@localhost/catenary";
+    let conn_string = "postgresql://lolpro11:lolpro11@localhost/transit";
     let (client, connection) = tokio_postgres::connect(&conn_string, NoTls).await.unwrap();
 
     tokio::spawn(async move {
