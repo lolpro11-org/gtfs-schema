@@ -3,11 +3,11 @@ use dmfr::{DistributedMobilityFeedRegistry, FeedSpec};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::RequestBuilder;
-use tokio::{sync::mpsc, task};
-use std::{fs::{self, File}, io::Write, sync::{Arc, Mutex}, thread};
+use std::{collections::{HashMap, HashSet}, fs::{self, File}, io::Write, path::PathBuf};
 
 async fn getstatic(feed: String, url: String) {
     let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).build().unwrap();
+    println!("Downloading {}", feed);
     let request: RequestBuilder = match feed.as_str() {
         "f-dp3-metra" => {
             client.get(&url)
@@ -39,7 +39,6 @@ async fn getstatic(feed: String, url: String) {
 
 #[tokio::main]
 async fn main() {
-    let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("/home/lolpro11/Documents/Catenary/catenary-backend/gtfs_static_zips/".to_string());
     let threads = 100;
     let dir = "transitland-atlas/feeds/";
     fs::create_dir("gtfs").unwrap_or_default();
@@ -70,4 +69,34 @@ async fn main() {
             futs.next().await.unwrap();
         }
     }
+    let mut downloaded = HashSet::new();
+    if let Ok(entries) = fs::read_dir("gtfs") {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let file_name = entry.file_name();
+                let file_path = PathBuf::from(&file_name);
+                
+                if let Some(file_stem) = file_path.file_stem() {
+                    if let Some(file_stem_str) = file_stem.to_str() {
+                        downloaded.insert(file_stem_str.to_string());
+                    }
+                }
+            }
+        }
+    } else {
+        eprintln!("Error reading directory");
+    }
+
+    let mut handles = Vec::new();
+    for url in urls {
+        if !downloaded.contains(&url.0) {
+            let feed_id = url.0.clone();
+            let url = url.1.clone();
+            let handle = tokio::spawn(async move {
+                getstatic(feed_id, url).await;
+            });
+            handles.push(handle);
+        }
+    }
+
 }
