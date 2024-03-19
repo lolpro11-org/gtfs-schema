@@ -1,7 +1,10 @@
 mod dmfr;
 use dmfr::{DistributedMobilityFeedRegistry, FeedSpec};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use reqwest::RequestBuilder;
-use std::{fs::{self, File}, io::Write};
+use tokio::{sync::mpsc, task};
+use std::{fs::{self, File}, io::Write, sync::{Arc, Mutex}, thread};
 
 async fn getstatic(feed: String, url: String) {
     let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).build().unwrap();
@@ -37,13 +40,10 @@ async fn getstatic(feed: String, url: String) {
 #[tokio::main]
 async fn main() {
     let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("/home/lolpro11/Documents/Catenary/catenary-backend/gtfs_static_zips/".to_string());
+    let threads = 100;
     let dir = "transitland-atlas/feeds/";
-    let _ = fs::create_dir("gtfs");
-    let mut handles = Vec::new();
-    let handle = tokio::spawn(async move {
-        getstatic("f-anteaterexpress".to_string(), "https://raw.githubusercontent.com/lolpro11/gtfs-schema/main/f-anteaterexpress.zip".to_string()).await;
-    });
-    handles.push(handle);
+    fs::create_dir("gtfs").unwrap_or_default();
+    let mut urls = vec![("f-anteaterexpress".to_string(), "https://raw.githubusercontent.com/lolpro11/gtfs-schema/main/f-anteaterexpress.zip".to_string())];
     for entry in fs::read_dir(dir).unwrap() {
         let path = entry.unwrap().path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
@@ -51,17 +51,23 @@ async fn main() {
             let domain: DistributedMobilityFeedRegistry = serde_json::from_str(&json).unwrap();
             for feed in domain.feeds {
                 if feed.spec == FeedSpec::Gtfs && feed.urls.static_current.as_deref().is_some() {
-                    let handle = tokio::spawn(async move {
-                        getstatic(feed.id, feed.urls.static_current.as_deref().unwrap_or(&"".to_string()).to_string()).await;
-                    });
-                    handles.push(handle);
+                    urls.push((feed.id, feed.urls.static_current.as_deref().unwrap_or(&"".to_string()).to_string()));
                 }
             }
         }
     };
-    for handle in handles {
-        if let Err(e) = handle.await {
-            eprintln!("Error awaiting task: {}", e);
+    println!("{:#?}", urls);
+    let mut futs = FuturesUnordered::new();
+
+    for feed in 0..urls.len()-1 {
+        let feed_id = urls[feed].0.clone();
+        let url = urls[feed].1.clone();
+        let fut = async move {
+            getstatic(feed_id, url).await;
+        };
+        futs.push(fut);
+        if futs.len() == threads {
+            futs.next().await.unwrap();
         }
     }
 }
