@@ -4,7 +4,7 @@ use async_recursion::async_recursion;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::Client;
-use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf, process::{Command, Output}};
+use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf};
 
 #[async_recursion]
 async fn getstatic(client: &Client, feed: String, url: String) {
@@ -68,41 +68,13 @@ async fn main() {
         }
     };
 
-    let mut downloaded = HashSet::new();
-    if let Ok(entries) = fs::read_dir("gtfs") {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let file_name = entry.file_name();
-                let file_path = PathBuf::from(&file_name);
-                
-                if let Some(file_stem) = file_path.file_stem() {
-                    if let Some(file_stem_str) = file_stem.to_str() {
-                        downloaded.insert(file_stem_str.to_string());
-                    }
-                }
-            }
-        }
-    } else {
-        eprintln!("Error reading directory");
-    }
     
-    let mut missing =  HashSet::new();
-    let mut counter = 0;
-    for url in &urls {
-        if !downloaded.contains(&url.0) {
-            println!("Missing feed: {}", url.0);
-            missing.insert(url.clone());
-            counter += 1;
-        }
-    }
-    println!("Total feeds missing: {}", counter);
-
+    let mut missing =  urls.clone();
 
     println!("{:#?}", urls);
 
+    let mut now_missing = Vec::new();
 
-    let mut now_missing = HashSet::new();
-    
     while missing != now_missing {
         now_missing = missing.clone();
         let mut futs = FuturesUnordered::new(); 
@@ -118,17 +90,35 @@ async fn main() {
                 futs.next().await.unwrap();
             }
         }
-        let mut counter = 0;
+
+        let mut downloaded = HashSet::new();
+        if let Ok(entries) = fs::read_dir("gtfs") {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let file_name = entry.file_name();
+                    let file_path = PathBuf::from(&file_name);
+                    
+                    if let Some(file_stem) = file_path.file_stem() {
+                        if let Some(file_stem_str) = file_stem.to_str() {
+                            downloaded.insert(file_stem_str.to_string());
+                        }
+                    }
+                }
+            }
+        } else {
+            eprintln!("Error reading directory");
+        }
+
         missing.clear();
         for url in &urls {
             if !downloaded.contains(&url.0) {
-                println!("Missing feed: {}", url.0);
-                missing.insert(url.clone());
-                counter += 1;
+                missing.push(url.clone());
             }
         }
-        urls = missing.clone().into_iter().collect();
-        println!("Total feeds missing: {}", counter);
+        urls = missing.clone();
+
+        println!("{:#?}", missing);
+        println!("Total feeds missing: {}", missing.len());
     }
 
 }
