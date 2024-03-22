@@ -4,43 +4,47 @@ use async_recursion::async_recursion;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::Client;
-use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf};
+use std::{collections::HashSet, error::Error, fs::{self, File}, io::Write, path::PathBuf};
 
 #[async_recursion]
 async fn getstatic(client: &Client, feed: String, url: String) {
-    println!("Downloading {}", feed);
-    let request = match feed.as_str() {
-        "f-dp3-metra" => {
-            client.get(&url)
-                .header("username", "bb2c71e54d827a4ab47917c426bdb48c")
-                .header("Authorization", "Basic YmIyYzcxZTU0ZDgyN2E0YWI0NzkxN2M0MjZiZGI0OGM6ZjhiY2Y4MDBhMjcxNThiZjkwYWVmMTZhZGFhNDRhZDI=")
-        }
-        "f-dqc-wmata~rail" | "f-dqc-wmata~bus" => {
-            client.get(&url).header("api_key", "3be3d48087754c4998e6b33b65ec9700")
-        }
-        _ => {
-            client.get(&url)
-        }
-    };
-
-    let response = request.send().await;
-    match response {
-        Ok(response) => {
-            let mut out = File::create(format!("gtfs/{}.zip", &feed)).expect("failed to create file");
-            let bytes_result = response.bytes().await;
-            if bytes_result.is_ok() {
-                out.write(&bytes_result.unwrap()).unwrap();
-                println!("Finished writing {}", &feed);
+    loop {
+        println!("Downloading {}", feed);
+        let request = match feed.as_str() {
+            "f-dp3-metra" => {
+                client.get(&url)
+                    .header("username", "bb2c71e54d827a4ab47917c426bdb48c")
+                    .header("Authorization", "Basic YmIyYzcxZTU0ZDgyN2E0YWI0NzkxN2M0MjZiZGI0OGM6ZjhiY2Y4MDBhMjcxNThiZjkwYWVmMTZhZGFhNDRhZDI=")
             }
-        }
-        Err(error) => {
-            println!("Error with downloading {}: {}", &feed, &error);
-            /*if !error.to_string().contains("invalid peer certificate") && !error.to_string().contains("dns") && !error.to_string().contains("os error") && !url.contains("ftp://") && (!error.is_redirect() || !error.is_status() || !error.is_builder() || error.is_connect()) {
-                println!("Retrying download: {}", &feed);
-                return getstatic(&client, feed, url).await;
-            } else {
-                return;
-            }*/
+            "f-dqc-wmata~rail" | "f-dqc-wmata~bus" => {
+                client.get(&url).header("api_key", "3be3d48087754c4998e6b33b65ec9700")
+            }
+            _ => {
+                client.get(&url)
+            }
+        };
+
+        let response = request.send().await;
+
+        match response {
+            Ok(response) => {
+                let mut out = File::create(format!("gtfs/{}.zip", &feed)).expect("failed to create file");
+                let bytes_result = response.bytes().await;
+                if bytes_result.is_ok() {
+                    out.write(&bytes_result.unwrap()).unwrap();
+                    println!("Finished writing {}", &feed);
+                }
+                break;
+            }
+            Err(err) => {
+                if let Some(os_err) = err.source().and_then(|e| e.downcast_ref::<std::io::Error>()) {
+                    if os_err.kind() == std::io::ErrorKind::ConnectionReset {
+                        println!("Connection reset by peer. Retrying download");
+                        continue;
+                    }
+                }
+                break;
+            }
         }
     }
 }
