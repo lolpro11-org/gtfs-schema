@@ -70,14 +70,53 @@ async fn main() {
         }
     };
 
-    
-    let mut missing =  urls.clone();
-
     println!("{:#?}", urls);
 
+    let mut futs = FuturesUnordered::new(); 
+    for feed in 0..urls.len()-1 {
+        let feed_id = urls[feed].0.clone();
+        let url = urls[feed].1.clone();
+        let fut = async move {
+            let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).use_rustls_tls().build().unwrap();
+            getstatic(&client, feed_id, url).await;
+        };
+        futs.push(fut);
+        if futs.len() == threads {
+            futs.next().await.unwrap();
+        }
+    }
+
+    let mut downloaded = HashSet::new();
+    if let Ok(entries) = fs::read_dir("gtfs") {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                let file_name = entry.file_name();
+                let file_path = PathBuf::from(&file_name);
+                
+                if let Some(file_stem) = file_path.file_stem() {
+                    if let Some(file_stem_str) = file_stem.to_str() {
+                        downloaded.insert(file_stem_str.to_string());
+                    }
+                }
+            }
+        }
+    } else {
+        eprintln!("Error reading directory");
+    }
+    let mut missing =  Vec::new();
+    for url in &urls {
+        if !downloaded.contains(&url.0) {
+            missing.push(url.clone());
+        }
+    }
+    println!("{:#?}", missing);
+    println!("Total feeds missing: {}", missing.len());
+
+    /*let mut missing =  urls.clone();
     let mut now_missing = Vec::new();
 
     while missing != now_missing {
+        println!("Restarting downloads, missing");
         now_missing = missing.clone();
         let mut futs = FuturesUnordered::new(); 
         for feed in 0..urls.len()-1 {
@@ -121,6 +160,6 @@ async fn main() {
 
         println!("{:#?}", missing);
         println!("Total feeds missing: {}", missing.len());
-    }
+    }*/
 
 }
