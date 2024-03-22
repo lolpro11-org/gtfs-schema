@@ -1,7 +1,7 @@
 mod dmfr;
 use dmfr::{DistributedMobilityFeedRegistry, FeedSpec};
 use async_recursion::async_recursion;
-use futures::stream::FuturesUnordered;
+use futures::{future::err, stream::FuturesUnordered};
 use futures::StreamExt;
 use reqwest::Client;
 use std::{collections::HashSet, error::Error, fs::{self, File}, io::Write, path::PathBuf};
@@ -38,11 +38,9 @@ async fn getstatic(client: &Client, feed: String, url: String) {
             }
             Err(err) => {
                 println!("Error with downloading {}: {}", &feed, &err);
-                if let Some(os_err) = err.source().and_then(|e| e.downcast_ref::<std::io::Error>()) {
-                    if os_err.kind() == std::io::ErrorKind::ConnectionReset {
-                        println!("Connection reset by peer. Retrying download");
-                        continue;
-                    }
+                if err.to_string().contains("os error 104") {
+                    println!("Connection reset by peer. Retrying download");
+                    continue;
                 }
                 break;
             }
