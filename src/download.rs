@@ -1,10 +1,10 @@
 mod dmfr;
 use dmfr::{DistributedMobilityFeedRegistry, FeedSpec};
 use async_recursion::async_recursion;
-use futures::{future::err, stream::FuturesUnordered};
+use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::Client;
-use std::{collections::HashSet, error::Error, fs::{self, File}, io::Write, path::PathBuf};
+use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf};
 
 #[async_recursion]
 async fn getstatic(client: &Client, feed: String, url: String) {
@@ -15,12 +15,15 @@ async fn getstatic(client: &Client, feed: String, url: String) {
                 client.get(&url)
                     .header("username", "bb2c71e54d827a4ab47917c426bdb48c")
                     .header("Authorization", "Basic YmIyYzcxZTU0ZDgyN2E0YWI0NzkxN2M0MjZiZGI0OGM6ZjhiY2Y4MDBhMjcxNThiZjkwYWVmMTZhZGFhNDRhZDI=")
+                    .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
             "f-dqc-wmata~rail" | "f-dqc-wmata~bus" => {
                 client.get(&url).header("api_key", "3be3d48087754c4998e6b33b65ec9700")
+                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
             _ => {
                 client.get(&url)
+                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
         };
 
@@ -38,10 +41,6 @@ async fn getstatic(client: &Client, feed: String, url: String) {
             }
             Err(err) => {
                 println!("Error with downloading {}: {}", &feed, &err);
-                if err.to_string().contains("os error 104") {
-                    println!("Connection reset by peer. Retrying download");
-                    continue;
-                }
                 break;
             }
         }
