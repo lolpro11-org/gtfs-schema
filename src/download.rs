@@ -127,6 +127,7 @@ async fn main() {
                 counter += 1;
             }
         }
+        urls = missing.clone().into_iter().collect();
         println!("Total feeds missing: {}", counter);
     }
 
