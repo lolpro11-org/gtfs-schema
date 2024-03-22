@@ -37,6 +37,7 @@ async fn getstatic(client: &Client, feed: String, url: String) {
                 break;
             }
             Err(err) => {
+                println!("Error with downloading {}: {}", &feed, &err);
                 if let Some(os_err) = err.source().and_then(|e| e.downcast_ref::<std::io::Error>()) {
                     if os_err.kind() == std::io::ErrorKind::ConnectionReset {
                         println!("Connection reset by peer. Retrying download");
