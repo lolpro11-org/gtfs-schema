@@ -67,21 +67,6 @@ async fn main() {
             }
         }
     };
-    println!("{:#?}", urls);
-    let mut futs = FuturesUnordered::new();
-
-    for feed in 0..urls.len()-1 {
-        let feed_id = urls[feed].0.clone();
-        let url = urls[feed].1.clone();
-        let fut = async move {
-            let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).use_rustls_tls().build().unwrap();
-            getstatic(&client, feed_id, url).await;
-        };
-        futs.push(fut);
-        if futs.len() == threads {
-            futs.next().await.unwrap();
-        }
-    }
 
     let mut downloaded = HashSet::new();
     if let Ok(entries) = fs::read_dir("gtfs") {
@@ -101,12 +86,48 @@ async fn main() {
         eprintln!("Error reading directory");
     }
     
+    let mut missing =  HashSet::new();
     let mut counter = 0;
-    for url in urls {
+    for url in &urls {
         if !downloaded.contains(&url.0) {
             println!("Missing feed: {}", url.0);
+            missing.insert(url.clone());
             counter += 1;
         }
     }
-    println!("Total feeds missing: {}", counter)
+    println!("Total feeds missing: {}", counter);
+
+
+    println!("{:#?}", urls);
+
+
+    let mut now_missing = HashSet::new();
+    
+    while missing != now_missing {
+        now_missing = missing.clone();
+        let mut futs = FuturesUnordered::new(); 
+        for feed in 0..urls.len()-1 {
+            let feed_id = urls[feed].0.clone();
+            let url = urls[feed].1.clone();
+            let fut = async move {
+                let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).use_rustls_tls().build().unwrap();
+                getstatic(&client, feed_id, url).await;
+            };
+            futs.push(fut);
+            if futs.len() == threads {
+                futs.next().await.unwrap();
+            }
+        }
+        let mut counter = 0;
+        missing.clear();
+        for url in &urls {
+            if !downloaded.contains(&url.0) {
+                println!("Missing feed: {}", url.0);
+                missing.insert(url.clone());
+                counter += 1;
+            }
+        }
+        println!("Total feeds missing: {}", counter);
+    }
+
 }
