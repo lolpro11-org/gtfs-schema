@@ -4,7 +4,7 @@ use async_recursion::async_recursion;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::Client;
-use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf};
+use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf, time::Duration};
 
 #[async_recursion]
 async fn getstatic(client: &Client, feed: String, url: String) {
@@ -15,15 +15,12 @@ async fn getstatic(client: &Client, feed: String, url: String) {
                 client.get(&url)
                     .header("username", "bb2c71e54d827a4ab47917c426bdb48c")
                     .header("Authorization", "Basic YmIyYzcxZTU0ZDgyN2E0YWI0NzkxN2M0MjZiZGI0OGM6ZjhiY2Y4MDBhMjcxNThiZjkwYWVmMTZhZGFhNDRhZDI=")
-                    .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
             "f-dqc-wmata~rail" | "f-dqc-wmata~bus" => {
                 client.get(&url).header("api_key", "3be3d48087754c4998e6b33b65ec9700")
-                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
             _ => {
                 client.get(&url)
-                .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0")
             }
         };
 
@@ -77,7 +74,8 @@ async fn main() {
         let feed_id = urls[feed].0.clone();
         let url = urls[feed].1.clone();
         let fut = async move {
-            let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).use_rustls_tls().build().unwrap();
+            let client = reqwest::ClientBuilder::new().cookie_store(true).deflate(true).gzip(true).brotli(true)
+            .use_rustls_tls().user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0").tcp_keepalive(Duration::new(300, 0)).build().unwrap();
             getstatic(&client, feed_id, url).await;
         };
         futs.push(fut);
@@ -103,6 +101,7 @@ async fn main() {
     } else {
         eprintln!("Error reading directory");
     }
+
     let mut missing =  Vec::new();
     for url in &urls {
         if !downloaded.contains(&url.0) {
