@@ -1,14 +1,15 @@
 mod dmfr;
 use dmfr::{DistributedMobilityFeedRegistry, FeedSpec};
+use async_recursion::async_recursion;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use reqwest::RequestBuilder;
-use std::{collections::{HashMap, HashSet}, fs::{self, File}, io::Write, path::PathBuf};
+use reqwest::Client;
+use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf, process::{Command, Output}};
 
-async fn getstatic(feed: String, url: String) {
-    let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).build().unwrap();
+#[async_recursion]
+async fn getstatic(client: &Client, feed: String, url: String) {
     println!("Downloading {}", feed);
-    let request: RequestBuilder = match feed.as_str() {
+    let request = match feed.as_str() {
         "f-dp3-metra" => {
             client.get(&url)
                 .header("username", "bb2c71e54d827a4ab47917c426bdb48c")
@@ -21,6 +22,7 @@ async fn getstatic(feed: String, url: String) {
             client.get(&url)
         }
     };
+
     let response = request.send().await;
     match response {
         Ok(response) => {
@@ -33,6 +35,12 @@ async fn getstatic(feed: String, url: String) {
         }
         Err(error) => {
             println!("Error with downloading {}: {}", &feed, &error);
+            /*if !error.to_string().contains("invalid peer certificate") && !error.to_string().contains("dns") && !error.to_string().contains("os error") && !url.contains("ftp://") && (!error.is_redirect() || !error.is_status() || !error.is_builder() || error.is_connect()) {
+                println!("Retrying download: {}", &feed);
+                return getstatic(&client, feed, url).await;
+            } else {
+                return;
+            }*/
         }
     }
 }
@@ -49,8 +57,12 @@ async fn main() {
             let json = fs::read_to_string(&path).unwrap();
             let domain: DistributedMobilityFeedRegistry = serde_json::from_str(&json).unwrap();
             for feed in domain.feeds {
-                if feed.spec == FeedSpec::Gtfs && feed.urls.static_current.as_deref().is_some() {
-                    urls.push((feed.id, feed.urls.static_current.as_deref().unwrap_or(&"".to_string()).to_string()));
+                if feed.spec == FeedSpec::Gtfs {
+                    if feed.urls.static_current.as_deref().is_some() {
+                        urls.push((feed.id, feed.urls.static_current.as_deref().unwrap().to_string()));
+                    } else if !feed.urls.static_historic.is_empty() {
+                        urls.push((feed.id, feed.urls.static_historic.first().unwrap().to_string()));
+                    }
                 }
             }
         }
@@ -62,13 +74,15 @@ async fn main() {
         let feed_id = urls[feed].0.clone();
         let url = urls[feed].1.clone();
         let fut = async move {
-            getstatic(feed_id, url).await;
+            let client = reqwest::ClientBuilder::new().deflate(true).gzip(true).brotli(true).use_rustls_tls().build().unwrap();
+            getstatic(&client, feed_id, url).await;
         };
         futs.push(fut);
         if futs.len() == threads {
             futs.next().await.unwrap();
         }
     }
+
     let mut downloaded = HashSet::new();
     if let Ok(entries) = fs::read_dir("gtfs") {
         for entry in entries {
@@ -86,17 +100,13 @@ async fn main() {
     } else {
         eprintln!("Error reading directory");
     }
-
-    let mut handles = Vec::new();
+    
+    let mut counter = 0;
     for url in urls {
         if !downloaded.contains(&url.0) {
-            let feed_id = url.0.clone();
-            let url = url.1.clone();
-            let handle = tokio::spawn(async move {
-                getstatic(feed_id, url).await;
-            });
-            handles.push(handle);
+            println!("Missing feed: {}", url.0);
+            counter += 1;
         }
     }
-
+    println!("Total feeds missing: {}", counter)
 }
