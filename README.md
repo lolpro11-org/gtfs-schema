@@ -2,7 +2,7 @@
 
 PostgreSQL schema for GTFS feeds from across the world.
 
-The best resource for up-to-date GTFS feeds is [TransitFeeds](www.transitfeeds.com).
+The best resource for up-to-date GTFS feeds is [Transitland](https://www.transit.land/).
 
 ## Nothing Overwhelming Here
 
