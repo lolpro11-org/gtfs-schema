@@ -104,7 +104,7 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE routes (
-            route_id text PRIMARY KEY,
+            route_id text,
             agency_id text NULL,
             route_short_name text NULL,
             route_long_name text NULL CHECK (route_short_name IS NOT NULL OR route_long_name IS NOT NULL),
