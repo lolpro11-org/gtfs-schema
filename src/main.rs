@@ -646,8 +646,8 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         &calendar_date.0,
                         &date.date,
                         &match date.exception_type {
-                            Exception::Added => "1",
-                            Exception::Deleted => "2",
+                            Exception::Added => 1_i32,
+                            Exception::Deleted => 2,
                         },
                         &onestop_feed_id
                     ]
