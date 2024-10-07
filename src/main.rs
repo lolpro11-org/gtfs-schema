@@ -883,12 +883,13 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
             let mut current_shape = shapes.1.first().unwrap().id.to_owned();
             let mut shape_vec = Vec::new();
             for shape in shapes.1 {
-                if current_shape.to_owned() != shape.id {
-                    features.push((current_shape, GeoJsonFeatureCollection {
+                // Check if we have a new shape
+                if current_shape != shape.id {
+                    features.push((current_shape.clone(), GeoJsonFeatureCollection {
                         type_: "FeatureCollection".to_string(),
-                        features: shape_vec,
+                        features: shape_vec.clone(),
                     }));
-                    shape_vec = Vec::new();
+                    shape_vec.clear(); // Clear the shape_vec for the new shape
                     
                     current_shape = shape.id.to_owned();
                 }
@@ -903,6 +904,13 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                 shape_vec.push(json!(point));
             }
 
+            // Push the final shape after the loop
+            if !shape_vec.is_empty() {
+                features.push((current_shape, GeoJsonFeatureCollection {
+                    type_: "FeatureCollection".to_string(),
+                    features: shape_vec,
+                }));
+            }
         }
         eprintln!("features: {:#?}", features);
         for feature in &features {
