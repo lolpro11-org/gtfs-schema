@@ -21,3 +21,7 @@ tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4"] }
 [[bin]]
 name = "download"
 path = "src/download.rs"
+
+[[bin]]
+path = "src/martin.rs"
+name = "martin"
