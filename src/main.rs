@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
 use futures::{stream::FuturesUnordered, StreamExt};
-use gtfs_structures::{Availability, BikesAllowedType, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, Transfers};
+use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
 use serde_derive::Serialize;
 use tokio::task;
 use tokio_postgres::{Client, NoTls};
@@ -721,6 +721,67 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     },
                     &stop.1.level_id.clone(),
                     &stop.1.platform_code.clone(),
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
+        for route in gtfs.routes {
+            client.execute("
+                INSERT INTO routes (
+                    route_id,
+                    agency_id,
+                    route_short_name,
+                    route_long_name,
+                    route_desc,
+                    route_type,
+                    route_url,
+                    route_color,
+                    route_text_color,
+                    route_sort_order,
+                    continuous_pickup,
+                    continuous_drop_off,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+                )",
+                &[
+                    &route.1.id,
+                    &route.1.agency_id,
+                    &route.1.short_name,
+                    &route.1.long_name,
+                    &route.1.desc,
+                    &match route.1.route_type {
+                        RouteType::Tramway => 0_i32,
+                        RouteType::Subway => 1,
+                        RouteType::Rail => 2,
+                        RouteType::Bus => 3,
+                        RouteType::Ferry => 4,
+                        RouteType::CableCar => 5,
+                        RouteType::Gondola => 6,
+                        RouteType::Funicular => 7,
+                        RouteType::Coach => 2,
+                        RouteType::Air => 11,
+                        RouteType::Taxi => 15,
+                        RouteType::Other(i) => i as i32,
+                    },
+                    &route.1.url,
+                    &route.1.color.to_string(),
+                    &route.1.text_color.to_string(),
+                    &route.1.order,
+                    &match route.1.continuous_pickup {
+                        ContinuousPickupDropOff::Continuous => 0_i32,
+                        ContinuousPickupDropOff::NotAvailable => 1,
+                        ContinuousPickupDropOff::ArrangeByPhone => 2,
+                        ContinuousPickupDropOff::CoordinateWithDriver => 3,
+                        ContinuousPickupDropOff::Unknown(i) => i as i32,
+                    },
+                    &match route.1.continuous_drop_off {
+                        ContinuousPickupDropOff::Continuous => 0_i32,
+                        ContinuousPickupDropOff::NotAvailable => 1,
+                        ContinuousPickupDropOff::ArrangeByPhone => 2,
+                        ContinuousPickupDropOff::CoordinateWithDriver => 3,
+                        ContinuousPickupDropOff::Unknown(i) => i as i32,
+                    },
                     &onestop_feed_id
                 ]
             ).await.unwrap();
