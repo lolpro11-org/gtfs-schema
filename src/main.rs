@@ -118,7 +118,7 @@ async fn makedb(client: &Client) {
             continuous_drop_off integer NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, route_id),
-            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
