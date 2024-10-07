@@ -990,10 +990,10 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         contains_id = EXCLUDED.contains_id;",
                     &[
                         &fare_rule.0,
-                        &rule.route_id.unwrap(),
-                        &rule.origin_id.unwrap(),
-                        &rule.destination_id.unwrap(),
-                        &rule.contains_id.unwrap(),
+                        &rule.route_id,
+                        &rule.origin_id,
+                        &rule.destination_id,
+                        &rule.contains_id,
                         &onestop_feed_id
                     ],
                 ).await.unwrap();
