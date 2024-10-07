@@ -570,7 +570,18 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id)
+                DO UPDATE SET
+                    service_id = excluded.service_id,
+                    monday = excluded.monday,
+                    tuesday = excluded.tuesday,
+                    wednesday = excluded.wednesday,
+                    thursday = excluded.thursday,
+                    friday = excluded.friday,
+                    saturday = excluded.saturday,
+                    sunday = excluded.sunday,
+                    start_date = excluded.start_date,
+                    end_date = excluded.end_date;",
                 &[
                     &calendar.0, 
                     &calendar.1.monday, 
@@ -877,9 +888,9 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
 
 #[tokio::main]
 async fn main() {
-    let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("/home/lolpro11/Documents/Catenary/catenary-backend/gtfs_static_zips/".to_string());
+    let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("./gtfs/".to_string());
 
-    let conn_string = "postgresql://lolpro11:lolpro11@localhost/transit";
+    let conn_string = "postgresql://postgres@password@localhost/postgres";
     let (client, connection) = tokio_postgres::connect(&conn_string, NoTls).await.unwrap();
 
     tokio::spawn(async move {
@@ -897,7 +908,7 @@ async fn main() {
                 if path.is_file() {
                     if let Some(file_name) = path.file_stem() {
                         if let Some(file_name_str) = file_name.to_str() {
-                            println!("{}", file_name_str);
+                            insertgtfs(&client, path).await;
                         }
                     }
                 }
