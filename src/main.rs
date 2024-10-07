@@ -167,7 +167,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE calendar_dates (
             service_id text NOT NULL,
-            date numeric(8) NOT NULL,
+            date date NOT NULL,
             exception_type integer NOT NULL CHECK (exception_type >= 1 AND exception_type <= 2),
             onestop_feed_id text NOT NULL
         );
@@ -570,7 +570,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-                ) ON CONFLICT (service_id)
+                ) ON CONFLICT (onestop_feed_id, service_id)
                 DO UPDATE SET
                     service_id = excluded.service_id,
                     monday = excluded.monday,
@@ -607,10 +607,13 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         onestop_feed_id
                     ) VALUES (
                         $1, $2, $3, $4
-                    ) ON CONFLICT (onestop_feed_id) do update set;",
+                    ) ON CONFLICT (onestop_feed_id, service_id) 
+                    DO UPDATE SET 
+                        date = EXCLUDED.date,
+                        exception_type = EXCLUDED.exception_type;",
                     &[
                         &calendar_date.0,
-                        &date.date.format("%Y%m%d").to_string(),
+                        &date.date,
                         &match date.exception_type {
                             Exception::Added => "1",
                             Exception::Deleted => "2",
@@ -641,7 +644,22 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id, stop_id) 
+                DO UPDATE SET 
+                    stop_code = EXCLUDED.stop_code,
+                    stop_name = EXCLUDED.stop_name,
+                    tts_stop_name = EXCLUDED.tts_stop_name,
+                    stop_desc = EXCLUDED.stop_desc,
+                    stop_lat = EXCLUDED.stop_lat,
+                    stop_lon = EXCLUDED.stop_lon,
+                    zone_id = EXCLUDED.zone_id,
+                    stop_url = EXCLUDED.stop_url,
+                    location_type = EXCLUDED.location_type,
+                    parent_station = EXCLUDED.parent_station,
+                    stop_timezone = EXCLUDED.stop_timezone,
+                    wheelchair_boarding = EXCLUDED.wheelchair_boarding,
+                    level_id = EXCLUDED.level_id,
+                    platform_code = EXCLUDED.platform_code;",
                 &[
                     &stop.0,
                     &stop.1.code.clone().unwrap(),
@@ -692,7 +710,18 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id, trip_id) 
+                DO UPDATE SET
+                    route_id = EXCLUDED.route_id,
+                    service_id = EXCLUDED.service_id,
+                    trip_id = EXCLUDED.trip_id,
+                    trip_headsign = EXCLUDED.trip_headsign,
+                    trip_short_name = EXCLUDED.trip_short_name,
+                    direction_id = EXCLUDED.direction_id,
+                    block_id = EXCLUDED.block_id,
+                    shape_id = EXCLUDED.shape_id,
+                    wheelchair_accessible = EXCLUDED.wheelchair_accessible,
+                    bikes_allowed = EXCLUDED.bikes_allowed;",
                 &[
                     &trip.1.route_id,
                     &trip.1.service_id,
@@ -724,7 +753,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
         }
         for agency in gtfs.agencies {
             client.execute("
-                CREATE TABLE agency (
+                INSERT INTO agency (
                     agency_id,
                     agency_name,
                     agency_url,
@@ -736,7 +765,15 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id) 
+                DO UPDATE SET
+                    agency_name = EXCLUDED.agency_name,
+                    agency_url = EXCLUDED.agency_url,
+                    agency_timezone = EXCLUDED.agency_timezone,
+                    agency_lang = EXCLUDED.agency_lang,
+                    agency_phone = EXCLUDED.agency_phone,
+                    agency_fare_url = EXCLUDED.agency_fare_url,
+                    agency_email = EXCLUDED.agency_email;",
                 &[
                     &agency.id.unwrap(),
                     &agency.name,
@@ -782,9 +819,13 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     shape_id,
                     shape_geojson,
                     exception_type,
+                    onestop_feed_id
                 ) VALUES (
-                    $1, $2, $3
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                    $1, $2, $3, $4
+                ) ON CONFLICT (onestop_feed_id, shape_id) 
+                DO UPDATE SET
+                    shape_geojson = EXCLUDED.shape_geojson,
+                    exception_type = EXCLUDED.exception_type;",
                 &[
                     &feature.0,
                     &serde_json::to_string(&feature.1).unwrap(),
@@ -807,7 +848,14 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id, fare_id) 
+                DO UPDATE SET
+                    price = EXCLUDED.price,
+                    currency_type = EXCLUDED.currency_type,
+                    payment_method = EXCLUDED.payment_method,
+                    transfers = EXCLUDED.transfers,
+                    agency_id = EXCLUDED.agency_id,
+                    transfer_duration = EXCLUDED.transfer_duration;",
                 &[
                     &fare_attribute.0,
                     &fare_attribute.1.price,
@@ -841,7 +889,13 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         onestop_feed_id
                     ) VALUES (
                         $1, $2, $3, $4, $5, $6
-                    ) ON CONFLICT (onestop_feed_id) do update set;",
+                    ) ON CONFLICT (onestop_feed_id, fare_id) 
+                    DO UPDATE SET
+                        fare_id = EXCLUDED.fare_id,
+                        route_id = EXCLUDED.route_id,
+                        origin_id = EXCLUDED.origin_id,
+                        destination_id = EXCLUDED.destination_id,
+                        contains_id = EXCLUDED.contains_id;",
                     &[
                         &fare_rule.0,
                         &rule.route_id.unwrap(),
@@ -855,7 +909,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
         }
         for feed_info in gtfs.feed_info {
             client.execute("
-                CREATE TABLE feed_info (
+                INSERT INTO feed_info (
                     feed_publisher_name,
                     feed_publisher_url,
                     feed_lang,
@@ -868,13 +922,23 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-                ) ON CONFLICT (onestop_feed_id) do update set;",
+                ) ON CONFLICT (onestop_feed_id) 
+                DO UPDATE SET
+                    feed_publisher_name = EXCLUDED.feed_publisher_name,
+                    feed_publisher_url = EXCLUDED.feed_publisher_url,
+                    feed_lang = EXCLUDED.feed_lang,
+                    feed_start_date = EXCLUDED.feed_start_date,
+                    feed_end_date = EXCLUDED.feed_end_date,
+                    feed_version = EXCLUDED.feed_version,
+                    feed_contact_email = EXCLUDED.feed_contact_email,
+                    feed_contact_url = EXCLUDED.feed_contact_url,
+                    default_lang = EXCLUDED.default_lang;",
                 &[
                     &feed_info.name,
                     &feed_info.url,
                     &feed_info.lang,
-                    &feed_info.start_date.unwrap().format("%Y%m%d").to_string(),
-                    &feed_info.end_date.unwrap().format("%Y%m%d").to_string(),
+                    &feed_info.start_date.unwrap(),
+                    &feed_info.end_date.unwrap(),
                     &feed_info.version.unwrap(),
                     &feed_info.contact_email.unwrap(),
                     &feed_info.contact_url.unwrap(),
