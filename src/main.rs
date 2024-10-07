@@ -148,7 +148,7 @@ async fn makedb(client: &Client) {
             continuous_drop_off integer NULL,
             shape_dist_traveled double precision NULL CHECK (shape_dist_traveled >= 0.0),
             timepoint boolean NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, trip_id)
         );
     ").await.unwrap();
