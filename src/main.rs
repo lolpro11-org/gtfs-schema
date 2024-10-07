@@ -345,7 +345,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE attributions (
             attribution_id text PRIMARY KEY,
-            agency_id text NOT NULL,
+            agency_id text NOT NULL REFERENCES agency ON DELETE CASCADE ON UPDATE CASCADE,
             route_onestop_feed_id text NULL,
             route_id text NULL,
             trip_id text NULL,
@@ -357,7 +357,6 @@ async fn makedb(client: &Client) {
             attribution_phone text NULL,
             attribution_email text NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
