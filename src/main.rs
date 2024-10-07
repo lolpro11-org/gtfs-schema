@@ -69,7 +69,7 @@ async fn makedb(client: &Client) {
             agency_phone text NULL,
             agency_fare_url text NULL,
             agency_email text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, agency_id)
         );
     ").await.unwrap();
