@@ -71,8 +71,7 @@ async fn makedb(client: &Client) {
             agency_phone text NULL,
             agency_fare_url text NULL,
             agency_email text NULL,
-            onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, agency_id)
+            onestop_feed_id text NOT NULL PRIMARY KEY,
         );
     ").await.unwrap();
     client.batch_execute("
@@ -602,7 +601,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9
-                ) ON CONFLICT (onestop_feed_id, agency_id) 
+                ) ON CONFLICT (onestop_feed_id) 
                 DO UPDATE SET
                     agency_name = EXCLUDED.agency_name,
                     agency_url = EXCLUDED.agency_url,
