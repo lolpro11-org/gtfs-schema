@@ -953,8 +953,8 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &fare_attribute.1.price,
                     &fare_attribute.1.currency,
                     &match fare_attribute.1.payment_method {
-                        PaymentMethod::Aboard => "0",
-                        PaymentMethod::PreBoarding => "1",
+                        PaymentMethod::Aboard => 0_i32,
+                        PaymentMethod::PreBoarding => 1,
                     },
                     &match fare_attribute.1.transfers {
                         Transfers::Unlimited => i16::MAX,
