@@ -695,12 +695,12 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &stop.0,
                     &stop.1.code.clone().unwrap(),
                     &stop.1.name.clone().unwrap(),
-                    &stop.1.tts_name.clone().unwrap(),
-                    &stop.1.description.clone().unwrap(),
+                    &stop.1.tts_name.clone(),
+                    &stop.1.description.clone(),
                     &stop.1.latitude.clone().unwrap(),
                     &stop.1.longitude.clone().unwrap(),
-                    &stop.1.zone_id.clone().unwrap(),
-                    &stop.1.url.clone().unwrap(),
+                    &stop.1.zone_id.clone(),
+                    &stop.1.url.clone(),
                     &match stop.1.location_type.clone() {
                         LocationType::StopPoint => 0,
                         LocationType::StopArea => 1,
@@ -708,19 +708,17 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         LocationType::GenericNode => 3,
                         LocationType::BoardingArea => 4,
                         LocationType::Unknown(i) => i,
-                        
                     },
-                    &stop.1.parent_station.clone().unwrap(),
-                    &stop.1.timezone.clone().unwrap(),
+                    &stop.1.parent_station.clone(),
+                    &stop.1.timezone.clone(),
                     &match stop.1.wheelchair_boarding.clone() {
                         Availability::InformationNotAvailable => 0,
                         Availability::Available => 1,
                         Availability::NotAvailable => 2,
                         Availability::Unknown(i) => i,
-
                     },
-                    &stop.1.level_id.clone().unwrap(),
-                    &stop.1.platform_code.clone().unwrap(),
+                    &stop.1.level_id.clone(),
+                    &stop.1.platform_code.clone(),
                     &onestop_feed_id
                 ]
             ).await.unwrap();
