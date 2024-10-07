@@ -602,7 +602,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9
-                ) ON CONFLICT (onestop_feed_id) 
+                ) ON CONFLICT (onestop_feed_id, agency_id) 
                 DO UPDATE SET
                     agency_name = EXCLUDED.agency_name,
                     agency_url = EXCLUDED.agency_url,
