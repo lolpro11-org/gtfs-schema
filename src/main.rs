@@ -587,6 +587,43 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
     let gtfs = Gtfs::from_path(gtfs.as_os_str());
     if gtfs.is_ok() {
         let gtfs = gtfs.unwrap();
+
+        for agency in gtfs.agencies {
+            client.execute("
+                INSERT INTO agency (
+                    agency_id,
+                    agency_name,
+                    agency_url,
+                    agency_timezone,
+                    agency_lang,
+                    agency_phone,
+                    agency_fare_url,
+                    agency_email,
+                    onestop_feed_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9
+                ) ON CONFLICT (onestop_feed_id) 
+                DO UPDATE SET
+                    agency_name = EXCLUDED.agency_name,
+                    agency_url = EXCLUDED.agency_url,
+                    agency_timezone = EXCLUDED.agency_timezone,
+                    agency_lang = EXCLUDED.agency_lang,
+                    agency_phone = EXCLUDED.agency_phone,
+                    agency_fare_url = EXCLUDED.agency_fare_url,
+                    agency_email = EXCLUDED.agency_email;",
+                &[
+                    &agency.id,
+                    &agency.name,
+                    &agency.url,
+                    &agency.timezone,
+                    &agency.lang,
+                    &agency.phone,
+                    &agency.fare_url,
+                    &agency.email,
+                    &onestop_feed_id
+                ]
+            ).await.unwrap();
+        }
         for calendar in gtfs.calendar  {
             client.execute("
                 INSERT INTO calendar (
@@ -840,42 +877,6 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         BikesAllowedType::NoBikesAllowed => 2,
                         BikesAllowedType::Unknown(i) => i as i32,
                     },
-                    &onestop_feed_id
-                ]
-            ).await.unwrap();
-        }
-        for agency in gtfs.agencies {
-            client.execute("
-                INSERT INTO agency (
-                    agency_id,
-                    agency_name,
-                    agency_url,
-                    agency_timezone,
-                    agency_lang,
-                    agency_phone,
-                    agency_fare_url,
-                    agency_email,
-                    onestop_feed_id
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9
-                ) ON CONFLICT (onestop_feed_id) 
-                DO UPDATE SET
-                    agency_name = EXCLUDED.agency_name,
-                    agency_url = EXCLUDED.agency_url,
-                    agency_timezone = EXCLUDED.agency_timezone,
-                    agency_lang = EXCLUDED.agency_lang,
-                    agency_phone = EXCLUDED.agency_phone,
-                    agency_fare_url = EXCLUDED.agency_fare_url,
-                    agency_email = EXCLUDED.agency_email;",
-                &[
-                    &agency.id,
-                    &agency.name,
-                    &agency.url,
-                    &agency.timezone,
-                    &agency.lang,
-                    &agency.phone,
-                    &agency.fare_url,
-                    &agency.email,
                     &onestop_feed_id
                 ]
             ).await.unwrap();
