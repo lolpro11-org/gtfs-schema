@@ -69,7 +69,7 @@ async fn makedb(client: &Client) {
             agency_phone text NULL,
             agency_fare_url text NULL,
             agency_email text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text UNIQUE NOT NULL
         );
     ").await.unwrap();
     client.batch_execute("
@@ -82,7 +82,7 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE stops (
-            stop_id text PRIMARY KEY,
+            stop_id text NOT NULL,
             stop_code text NULL,
             stop_name text NULL CHECK (location_type >= 0 AND location_type <= 2 AND stop_name IS NOT NULL OR location_type > 2),
             tts_stop_name text NULL,
@@ -97,7 +97,8 @@ async fn makedb(client: &Client) {
             wheelchair_boarding integer NULL CHECK (wheelchair_boarding >= 0 AND wheelchair_boarding <= 2 OR wheelchair_boarding IS NULL),
             level_id text NULL REFERENCES levels ON DELETE CASCADE ON UPDATE CASCADE,
             platform_code text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            PRIMARY KEY (onestop_feed_id, stop_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -121,7 +122,7 @@ async fn makedb(client: &Client) {
         CREATE TABLE trips (
             route_id text NOT NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE,
             service_id text NOT NULL,
-            trip_id text NOT NULL PRIMARY KEY,
+            trip_id text NOT NULL,
             trip_headsign text NULL,
             trip_short_name text NULL,
             direction_id boolean NULL,
@@ -129,7 +130,8 @@ async fn makedb(client: &Client) {
             shape_id text NULL,
             wheelchair_accessible integer NULL CHECK (wheelchair_accessible >= 0 AND wheelchair_accessible <= 2),
             bikes_allowed integer NULL CHECK (bikes_allowed >= 0 AND bikes_allowed <= 2),
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            PRIMARY KEY (onestop_feed_id, trip_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -151,7 +153,7 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE calendar (
-            service_id text PRIMARY KEY,
+            service_id text NOT NULL,
             monday boolean NOT NULL,
             tuesday boolean NOT NULL,
             wednesday boolean NOT NULL,
@@ -161,7 +163,8 @@ async fn makedb(client: &Client) {
             sunday boolean NOT NULL,
             start_date date NOT NULL,
             end_date date NOT NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            PRIMARY KEY (onestop_feed_id, service_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -169,12 +172,13 @@ async fn makedb(client: &Client) {
             service_id text NOT NULL,
             date date NOT NULL,
             exception_type integer NOT NULL CHECK (exception_type >= 1 AND exception_type <= 2),
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            PRIMARY KEY (onestop_feed_id, service_id)
         );
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE fare_attributes (
-            fare_id text PRIMARY KEY,
+            fare_id text NOT NULL,
             price double precision NOT NULL CHECK (price >= 0.0),
             currency_type text NOT NULL,
             payment_method boolean NOT NULL,
@@ -182,6 +186,7 @@ async fn makedb(client: &Client) {
             agency_id text NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL
+            PRIMARY KEY (onestop_feed_id, fare_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -192,6 +197,7 @@ async fn makedb(client: &Client) {
             destination_id text NULL,
             contains_id text NULL,
             onestop_feed_id text NOT NULL
+            PRIMARY KEY (onestop_feed_id, fare_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -254,6 +260,7 @@ async fn makedb(client: &Client) {
             shape_id text NOT NULL,
             shape_geojson JSONB NOT NULL,
             onestop_feed_id text NOT NULL
+            PRIMARY KEY (onestop_feed_id, shape_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -307,7 +314,7 @@ async fn makedb(client: &Client) {
             feed_contact_email text NULL,
             feed_contact_url text NULL,
             default_lang text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL PRIMARY KEY
         );
     ").await.unwrap();
     client.batch_execute("
