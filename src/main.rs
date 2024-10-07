@@ -949,7 +949,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                     shape_geojson = EXCLUDED.shape_geojson;",
                 &[
                     &feature.0,
-                    &serde_json::to_value(&feature.1).unwrap(),
+                    &serde_json::to_value(&feature.1.features).unwrap(),
                     &onestop_feed_id,
                 ],
             ).await?;
