@@ -159,8 +159,8 @@ async fn makedb(client: &Client) {
             friday boolean NOT NULL,
             saturday boolean NOT NULL,
             sunday boolean NOT NULL,
-            start_date numeric(8) NOT NULL,
-            end_date numeric(8) NOT NULL,
+            start_date date NOT NULL,
+            end_date date NOT NULL,
             onestop_feed_id text NOT NULL
         );
     ").await.unwrap();
@@ -591,8 +591,8 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &calendar.1.friday, 
                     &calendar.1.saturday, 
                     &calendar.1.sunday,
-                    &calendar.1.start_date.format("%Y%m%d").to_string(),
-                    &calendar.1.end_date.format("%Y%m%d").to_string(), 
+                    &calendar.1.start_date,
+                    &calendar.1.end_date, 
                     &onestop_feed_id
                 ],
             ).await.unwrap();
