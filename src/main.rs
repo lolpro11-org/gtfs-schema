@@ -758,8 +758,8 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &trip.1.trip_headsign.unwrap(),
                     &trip.1.trip_short_name.unwrap(),
                     &match trip.1.direction_id.unwrap() {
-                        DirectionType::Outbound => 0 as i16,
-                        DirectionType::Inbound => 1 as i16,
+                        DirectionType::Outbound => 0_i32,
+                        DirectionType::Inbound => 1,
                     },
                     &trip.1.block_id.unwrap(),
                     &trip.1.shape_id.unwrap(),
@@ -767,14 +767,14 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         Availability::InformationNotAvailable => 0,
                         Availability::Available => 1,
                         Availability::NotAvailable => 2,
-                        Availability::Unknown(i) => i,
+                        Availability::Unknown(i) => i as i32,
 
                     },
                     &match trip.1.bikes_allowed {
                         BikesAllowedType::NoBikeInfo => 0,
                         BikesAllowedType::AtLeastOneBike => 1,
                         BikesAllowedType::NoBikesAllowed => 2,
-                        BikesAllowedType::Unknown(i) => i,
+                        BikesAllowedType::Unknown(i) => i as i32,
                     },
                     &onestop_feed_id
                 ]
