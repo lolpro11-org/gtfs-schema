@@ -199,7 +199,7 @@ async fn makedb(client: &Client) {
             origin_id text NULL,
             destination_id text NULL,
             contains_id text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id)
         );
     ").await.unwrap();
