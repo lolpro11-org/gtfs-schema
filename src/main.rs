@@ -136,10 +136,10 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE stop_times (
-            trip_id text NOT NULL REFERENCES trips ON DELETE CASCADE ON UPDATE CASCADE,
+            trip_id text NOT NULL REFERENCES trips(trip_id) ON DELETE CASCADE ON UPDATE CASCADE,
             arrival_time interval NULL,
             departure_time interval NOT NULL,
-            stop_id text NOT NULL REFERENCES stops ON DELETE CASCADE ON UPDATE CASCADE,
+            stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
             stop_sequence integer NOT NULL CHECK (stop_sequence >= 0),
             stop_headsign text NULL,
             pickup_type integer NOT NULL CHECK (pickup_type >= 0 AND pickup_type <= 3),
