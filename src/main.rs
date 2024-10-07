@@ -265,7 +265,7 @@ async fn makedb(client: &Client) {
         CREATE TABLE shapes (
             shape_id text NOT NULL,
             shape_geojson JSONB NOT NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, shape_id)
         );
     ").await.unwrap();
