@@ -957,11 +957,11 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         PaymentMethod::PreBoarding => 1,
                     },
                     &match fare_attribute.1.transfers {
-                        Transfers::Unlimited => i16::MAX,
+                        Transfers::Unlimited => i32::MAX,
                         Transfers::NoTransfer => 0,
                         Transfers::UniqueTransfer => 1,
                         Transfers::TwoTransfers => 2,
-                        Transfers::Other(i16) => i16,
+                        Transfers::Other(i) => i as i32,
                     },
                     &fare_attribute.1.agency_id,
                     &fare_attribute.1.transfer_duration.map(|x| x as i32),
