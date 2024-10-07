@@ -118,7 +118,7 @@ async fn makedb(client: &Client) {
             continuous_pickup integer NULL,
             continuous_drop_off integer NULL,
             onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, route_id),
+            PRIMARY KEY (onestop_feed_id, route_id)
             --FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
@@ -194,7 +194,7 @@ async fn makedb(client: &Client) {
             agency_id text NULL,
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, fare_id),
+            PRIMARY KEY (onestop_feed_id, fare_id)
             --FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
