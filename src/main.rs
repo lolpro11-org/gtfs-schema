@@ -187,7 +187,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE fare_attributes (
             fare_id text NOT NULL,
-            price double precision NOT NULL CHECK (price >= 0.0),
+            price text NOT NULL, --double precision NOT NULL CHECK (price >= 0.0),
             currency_type text NOT NULL,
             payment_method boolean NOT NULL,
             transfers integer NULL CHECK (transfers >= 0 AND transfers <= 5),
