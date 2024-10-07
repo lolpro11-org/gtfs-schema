@@ -188,7 +188,7 @@ async fn makedb(client: &Client) {
             transfers integer NULL CHECK (transfers >= 0 AND transfers <= 5),
             agency_id text NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id)
         );
     ").await.unwrap();
