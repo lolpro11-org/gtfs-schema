@@ -271,32 +271,36 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE frequencies (
-            trip_id text NOT NULL REFERENCES trips ON DELETE CASCADE ON UPDATE CASCADE,
+            trip_id text NOT NULL,
             start_time interval NOT NULL,
             end_time interval NOT NULL,
             headway_secs integer NOT NULL CHECK (headway_secs >= 0),
             exact_times boolean NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE transfers (
-            from_stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            to_stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            from_onestop_feed_id text NOT NULL,
+            from_stop_id text NOT NULL,
+            to_onestop_feed_id text NOT NULL,
+            to_stop_id text NOT NULL,
             transfer_type integer NOT NULL CHECK (transfer_type >= 0 AND transfer_type <= 3),
             min_transfer_time integer NULL CHECK (min_transfer_time >= 0),
             from_route_id text NULL,
             to_route_id text NULL,
             from_trip_id text NULL,
             to_trip_id text NULL,
-            onestop_feed_id text NOT NULL
+            FOREIGN KEY (from_onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE pathways (
             pathway_id text PRIMARY KEY,
-            from_stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            to_stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            from_stop_id text NOT NULL,
+            to_onestop_feed_id text NOT NULL,
             pathway_mode integer NOT NULL CHECK (pathway_mode >= 1 AND pathway_mode <= 7),
             is_bidirectional boolean NOT NULL,
             length double precision NULL CHECK (length >= 0.0),
@@ -306,7 +310,9 @@ async fn makedb(client: &Client) {
             min_width double precision NULL CHECK (min_width >= 0.0),
             signposted_as text NULL,
             reversed_signposted_as text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            FOREIGN KEY (from_onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -338,9 +344,10 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE attributions (
             attribution_id text PRIMARY KEY,
-            agency_id text NOT NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            route_id text NULL REFERENCES routes(route_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            trip_id text NULL REFERENCES trips(trip_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            agency_id text NOT NULL,
+            route_onestop_feed_id text NULL,
+            route_id text NULL,
+            trip_id text NULL,
             organization_name text NOT NULL,
             is_producer integer NULL,
             is_operator integer NULL,
@@ -348,7 +355,10 @@ async fn makedb(client: &Client) {
             attribution_url text NULL,
             attribution_phone text NULL,
             attribution_email text NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     
