@@ -577,11 +577,9 @@ async fn makedb(client: &Client) {
             END
             $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
         ").await.unwrap();
-    
-
 }
 
-async fn insertgtfs(client: &Client, gtfs: PathBuf) {
+async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres::Error> {
     let onestop_feed_id = gtfs.file_stem().unwrap().to_str().unwrap();
     let gtfs = Gtfs::from_path(gtfs.as_os_str());
     if gtfs.is_ok() {
@@ -621,7 +619,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &agency.email,
                     &onestop_feed_id
                 ]
-            ).await.unwrap();
+            ).await?;
         }
         for calendar in gtfs.calendar  {
             client.execute("
@@ -664,7 +662,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &calendar.1.end_date, 
                     &onestop_feed_id
                 ],
-            ).await.unwrap();
+            ).await?;
         }
         for calendar_date in gtfs.calendar_dates {
             for date in calendar_date.1 {
@@ -689,7 +687,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         },
                         &onestop_feed_id
                     ]
-                ).await.unwrap();
+                ).await?;
             }
         }
         for stop in gtfs.stops {
@@ -759,7 +757,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &stop.1.platform_code.clone(),
                     &onestop_feed_id
                 ]
-            ).await.unwrap();
+            ).await?;
         }
         for route in gtfs.routes {
             client.execute("
@@ -820,7 +818,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     },
                     &onestop_feed_id
                 ]
-            ).await.unwrap();
+            ).await?;
         }
         for trip in gtfs.trips {
             client.execute("
@@ -878,7 +876,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     },
                     &onestop_feed_id
                 ]
-            ).await.unwrap();
+            ).await?;
         }
         let mut features = Vec::new();
         for shapes in gtfs.shapes {
@@ -924,7 +922,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &serde_json::to_string(&feature.1).unwrap(),
                     &onestop_feed_id
                 ],
-            ).await.unwrap();
+            ).await?;
         }
         std::mem::drop(features);
         for fare_attribute in gtfs.fare_attributes {
@@ -967,7 +965,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &fare_attribute.1.transfer_duration.map(|x| x as i32),
                     &onestop_feed_id
                 ],
-            ).await.unwrap();
+            ).await?;
         }
         for fare_rule in gtfs.fare_rules {
             for rule in fare_rule.1 {
@@ -996,7 +994,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         &rule.contains_id,
                         &onestop_feed_id
                     ],
-                ).await.unwrap();
+                ).await?;
             }
         }
         for feed_info in gtfs.feed_info {
@@ -1037,9 +1035,10 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &feed_info.default_lang,
                     &onestop_feed_id
                 ]
-            ).await.unwrap();
+            ).await?;
         }
     }
+    return Ok(());
 }
 
 #[tokio::main]
@@ -1077,7 +1076,7 @@ async fn main() {
                                         eprintln!("connection error: {}", e);
                                     }
                                 });
-                                insertgtfs(&client, path).await;
+                                insertgtfs(&client, path).await.unwrap();
                                 println!("Finished: {}", file);
                             };
                             futs.push(task::spawn(fut));
