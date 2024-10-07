@@ -194,13 +194,14 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE fare_rules (
-            fare_id text NOT NULL REFERENCES fare_attributes ON DELETE CASCADE ON UPDATE CASCADE,
+            fare_id text NOT NULL,
             route_id text NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE,
             origin_id text NULL,
             destination_id text NULL,
             contains_id text NULL,
             onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, fare_id)
+            PRIMARY KEY (onestop_feed_id, fare_id),
+            FOREIGN KEY (onestop_feed_id, fare_id) REFERENCES fare_attributes(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
