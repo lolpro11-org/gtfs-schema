@@ -119,7 +119,7 @@ async fn makedb(client: &Client) {
             continuous_drop_off integer NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, route_id),
-            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -195,7 +195,7 @@ async fn makedb(client: &Client) {
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id),
-            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -365,7 +365,7 @@ async fn makedb(client: &Client) {
             attribution_phone text NULL,
             attribution_email text NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
