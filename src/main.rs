@@ -105,7 +105,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE routes (
             route_id text PRIMARY KEY,
-            agency_id text NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            agency_id text NULL,
             route_short_name text NULL,
             route_long_name text NULL CHECK (route_short_name IS NOT NULL OR route_long_name IS NOT NULL),
             route_desc text NULL,
@@ -116,12 +116,14 @@ async fn makedb(client: &Client) {
             route_sort_order integer NULL CHECK (route_sort_order >= 0),
             continuous_pickup integer NULL,
             continuous_drop_off integer NULL,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            PRIMARY KEY (onestop_feed_id, route_id),
+            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
         );
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE trips (
-            route_id text NOT NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE,
+            route_id text NOT NULL,
             service_id text NOT NULL,
             trip_id text NOT NULL,
             trip_headsign text NULL,
@@ -132,7 +134,8 @@ async fn makedb(client: &Client) {
             wheelchair_accessible integer NULL CHECK (wheelchair_accessible >= 0 AND wheelchair_accessible <= 2),
             bikes_allowed integer NULL CHECK (bikes_allowed >= 0 AND bikes_allowed <= 2),
             onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, trip_id)
+            PRIMARY KEY (onestop_feed_id, trip_id),
+            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -187,22 +190,24 @@ async fn makedb(client: &Client) {
             currency_type text NOT NULL,
             payment_method boolean NOT NULL,
             transfers integer NULL CHECK (transfers >= 0 AND transfers <= 5),
-            agency_id text NULL REFERENCES agency(agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            agency_id text NULL,
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, fare_id)
+            PRIMARY KEY (onestop_feed_id, fare_id),
+            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
         );
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE fare_rules (
             fare_id text NOT NULL,
-            route_id text NULL REFERENCES routes ON DELETE CASCADE ON UPDATE CASCADE,
+            route_id text NULL,
             origin_id text NULL,
             destination_id text NULL,
             contains_id text NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id),
-            FOREIGN KEY (onestop_feed_id, fare_id) REFERENCES fare_attributes(onestop_feed_id, fare_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, fare_id) REFERENCES fare_attributes(onestop_feed_id, fare_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
