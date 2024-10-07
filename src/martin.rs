@@ -1,3 +1,5 @@
+use tokio_postgres::NoTls;
+
 #[tokio::main]
 async fn main() {
     let conn_string = "postgresql://postgres:password@localhost/postgres";
@@ -10,49 +12,49 @@ async fn main() {
     });
 
     client.batch_execute("
-    CREATE OR REPLACE
-    FUNCTION busonly(z integer, x integer, y integer)
-    RETURNS bytea AS $$
-    DECLARE
-    mvt bytea;
-    BEGIN
-    SELECT INTO mvt ST_AsMVT(tile, 'busonly', 4096, 'geom') FROM (
-        SELECT
-        ST_AsMVTGeom(
-            ST_Transform(linestring, 3857),
-                         ST_TileEnvelope(z, x, y),
-                         4096, 64, true) AS geom,
-                         onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                         FROM gtfs.shapes
-                         WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
-    ) as tile WHERE geom IS NOT NULL;
+        CREATE OR REPLACE
+        FUNCTION busonly(z integer, x integer, y integer)
+        RETURNS bytea AS $$
+        DECLARE
+        mvt bytea;
+        BEGIN
+        SELECT INTO mvt ST_AsMVT(tile, 'busonly', 4096, 'geom') FROM (
+            SELECT
+            ST_AsMVTGeom(
+                ST_Transform(linestring, 3857),
+                            ST_TileEnvelope(z, x, y),
+                            4096, 64, true) AS geom,
+                            onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
+                            FROM shapes
+                            WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
+        ) as tile WHERE geom IS NOT NULL;
 
-    RETURN mvt;
-    END
-    $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
+        RETURN mvt;
+        END
+        $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
     ").await.unwrap();
 
     client.batch_execute("
-    CREATE OR REPLACE
-    FUNCTION notbus(z integer, x integer, y integer)
-    RETURNS bytea AS $$
-    DECLARE
-    mvt bytea;
-    BEGIN
-    SELECT INTO mvt ST_AsMVT(tile, 'notbus', 4096, 'geom') FROM (
-        SELECT
-        ST_AsMVTGeom(
-            ST_Transform(linestring, 3857),
-                         ST_TileEnvelope(z, x, y),
-                         4096, 64, true) AS geom,
-                         onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                         FROM gtfs.shapes
-                         WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND route_type != 3 AND route_type != 11
-    ) as tile WHERE geom IS NOT NULL;
+        CREATE OR REPLACE
+        FUNCTION notbus(z integer, x integer, y integer)
+        RETURNS bytea AS $$
+        DECLARE
+        mvt bytea;
+        BEGIN
+        SELECT INTO mvt ST_AsMVT(tile, 'notbus', 4096, 'geom') FROM (
+            SELECT
+            ST_AsMVTGeom(
+                ST_Transform(linestring, 3857),
+                            ST_TileEnvelope(z, x, y),
+                            4096, 64, true) AS geom,
+                            onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
+                            FROM shapes
+                            WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND route_type != 3 AND route_type != 11
+        ) as tile WHERE geom IS NOT NULL;
 
-    RETURN mvt;
-    END
-    $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
+        RETURN mvt;
+        END
+        $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
     ").await.unwrap();
 
     client.batch_execute("
@@ -69,7 +71,7 @@ async fn main() {
                          ST_TileEnvelope(z, x, y),
                          4096, 64, true) AS geom,
                          onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                         FROM gtfs.shapes
+                         FROM shapes
                          WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 0 OR route_type = 1 OR route_type = 5 OR route_type = 12)
     ) as tile WHERE geom IS NOT NULL;
 
@@ -92,7 +94,7 @@ async fn main() {
                          ST_TileEnvelope(z, x, y),
                          4096, 64, true) AS geom,
                          onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                         FROM gtfs.shapes
+                         FROM shapes
                          WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 2)
     ) as tile WHERE geom IS NOT NULL;
 
@@ -115,7 +117,7 @@ async fn main() {
                          ST_TileEnvelope(z, x, y),
                          4096, 64, true) AS geom,
                          onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                         FROM gtfs.shapes
+                         FROM shapes
                          WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 4 OR route_type = 6 OR route_type = 7)
     ) as tile WHERE geom IS NOT NULL;
 
