@@ -1,8 +1,10 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
+use futures::{stream::FuturesUnordered, StreamExt};
 use gtfs_structures::{Availability, BikesAllowedType, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, Transfers};
+use serde_derive::Serialize;
+use tokio::task;
 use tokio_postgres::{Client, NoTls};
-use serde::{Serialize, Deserialize};
 use serde_json::{json, Value};
 
 #[derive(Serialize)]
@@ -758,8 +760,9 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &trip.1.trip_headsign,
                     &trip.1.trip_short_name,
                     &match trip.1.direction_id {
-                        DirectionType::Outbound => 0_i32,
-                        DirectionType::Inbound => 1,
+                        Some(DirectionType::Outbound) => Some(0_i32),
+                        Some(DirectionType::Inbound) => Some(1),
+                        None => None,
                     },
                     &trip.1.block_id,
                     &trip.1.shape_id,
@@ -993,7 +996,7 @@ async fn main() {
     });
 
     makedb(&client).await;
-
+    drop(client);
     let mut futs = FuturesUnordered::new();
     let mut outputs = Vec::new();
     if let Ok(entries) = fs::read_dir(gtfs_dir) {
@@ -1002,8 +1005,18 @@ async fn main() {
                 let path = entry.path();            
                 if path.is_file() {
                     if let Some(file_name) = path.file_stem() {
-                        if let Some(file_name_str) = file_name.to_str() {
-                            let fut = async move {insertgtfs(&client, path).await};
+                        if file_name.to_str().is_some() {
+                            let fut = async move {
+                                let conn_string = "postgresql://postgres:password@localhost/postgres";
+                                let (client, connection) = tokio_postgres::connect(&conn_string, NoTls).await.unwrap();
+
+                                tokio::spawn(async move {
+                                    if let Err(e) = connection.await {
+                                        eprintln!("connection error: {}", e);
+                                    }
+                                });
+                                insertgtfs(&client, path).await;
+                            };
                             futs.push(task::spawn(fut));
                             if futs.len() == 128 {
                                 futs.next().await;
