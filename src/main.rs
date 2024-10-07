@@ -263,9 +263,9 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE route_networks (
             network_id text NOT NULL REFERENCES networks ON DELETE CASCADE ON UPDATE CASCADE,
-            network_name text NOT NULL,
+            route_id text NOT NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, network_name) REFERENCES routes(onestop_feed_id, network_name) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
