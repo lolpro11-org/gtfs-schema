@@ -210,7 +210,8 @@ async fn makedb(client: &Client) {
             start_time interval NULL,
             end_time interval NULL,
             service_id text NOT NULL REFERENCES calendar ON DELETE CASCADE ON UPDATE CASCADE,
-            onestop_feed_id text NOT NULL
+            onestop_feed_id text NOT NULL,
+            FOREIGN KEY (onestop_feed_id, service_id) REFERENCES calendar(onestop_feed_id, fare_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
