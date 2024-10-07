@@ -767,7 +767,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &route.1.url,
                     &route.1.color.to_string(),
                     &route.1.text_color.to_string(),
-                    &route.1.order,
+                    &route.1.order.map(|x| x as i32),
                     &match route.1.continuous_pickup {
                         ContinuousPickupDropOff::Continuous => 0_i32,
                         ContinuousPickupDropOff::NotAvailable => 1,
