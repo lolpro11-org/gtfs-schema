@@ -385,7 +385,7 @@ async fn makedb(client: &Client) {
                 ST_TileEnvelope(z, x, y),
                 4096, 64, true) AS geom,
                 onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-            FROM gtfs.shapes
+            FROM shapes
             WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
         ) as tile WHERE geom IS NOT NULL;
     
@@ -408,7 +408,7 @@ async fn makedb(client: &Client) {
                 ST_TileEnvelope(z, x, y),
                 4096, 64, true) AS geom,
                 onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-            FROM gtfs.shapes
+            FROM shapes
             WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND route_type != 3 AND route_type != 11
             ) as tile WHERE geom IS NOT NULL;
         
@@ -431,7 +431,7 @@ async fn makedb(client: &Client) {
                 ST_TileEnvelope(z, x, y),
                 4096, 64, true) AS geom,
                 onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-            FROM gtfs.shapes
+            FROM shapes
             WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 0 OR route_type = 1 OR route_type = 5 OR route_type = 12)
             ) as tile WHERE geom IS NOT NULL;
         
@@ -454,7 +454,7 @@ async fn makedb(client: &Client) {
                 ST_TileEnvelope(z, x, y),
                 4096, 64, true) AS geom,
                 onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-            FROM gtfs.shapes
+            FROM shapes
             WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 2)
             ) as tile WHERE geom IS NOT NULL;
         
@@ -477,7 +477,7 @@ async fn makedb(client: &Client) {
                 ST_TileEnvelope(z, x, y),
                 4096, 64, true) AS geom,
                 onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-            FROM gtfs.shapes
+            FROM shapes
             WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 4 OR route_type = 6 OR route_type = 7)
             ) as tile WHERE geom IS NOT NULL;
         

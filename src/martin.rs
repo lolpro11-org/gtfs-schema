@@ -21,12 +21,12 @@ async fn main() {
         SELECT INTO mvt ST_AsMVT(tile, 'busonly', 4096, 'geom') FROM (
             SELECT
             ST_AsMVTGeom(
-                ST_Transform(linestring, 3857),
+                ST_Transform(shape_geojson, 3857),
                             ST_TileEnvelope(z, x, y),
                             4096, 64, true) AS geom,
                             onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
                             FROM shapes
-                            WHERE (linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
+                            WHERE (shape_geojson && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
         ) as tile WHERE geom IS NOT NULL;
 
         RETURN mvt;
