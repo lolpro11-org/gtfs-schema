@@ -97,7 +97,7 @@ async fn makedb(client: &Client) {
             parent_station text NULL CHECK (location_type IS NULL OR location_type = 0 OR location_type = 1 AND parent_station IS NULL OR location_type >= 2 AND location_type <= 4 AND parent_station IS NOT NULL),
             stop_timezone text NULL,
             wheelchair_boarding integer NULL CHECK (wheelchair_boarding >= 0 AND wheelchair_boarding <= 2 OR wheelchair_boarding IS NULL),
-            level_id text NULL --REFERENCES levels ON DELETE CASCADE ON UPDATE CASCADE,
+            level_id text NULL, --REFERENCES levels ON DELETE CASCADE ON UPDATE CASCADE,
             platform_code text NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, stop_id)
