@@ -993,15 +993,22 @@ async fn main() {
     });
 
     makedb(&client).await;
+
+    let mut futs = FuturesUnordered::new();
+    let mut outputs = Vec::new();
     if let Ok(entries) = fs::read_dir(gtfs_dir) {
         for entry in entries {
             if let Ok(entry) = entry {
-                let path = entry.path();
-                
+                let path = entry.path();            
                 if path.is_file() {
                     if let Some(file_name) = path.file_stem() {
                         if let Some(file_name_str) = file_name.to_str() {
-                            insertgtfs(&client, path).await;
+                            let fut = async move {insertgtfs(&client, path).await};
+                            futs.push(task::spawn(fut));
+                            if futs.len() == 128 {
+                                futs.next().await;
+                                outputs.push(());
+                            }
                         }
                     }
                 }
@@ -1010,5 +1017,7 @@ async fn main() {
     } else {
         eprintln!("Error reading the directory");
     }
-    
+    while let Some(_item) = futs.next().await {
+        outputs.push(());
+    }
 }
