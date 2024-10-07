@@ -61,7 +61,7 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE agency (
-            agency_id text UNIQUE NULL,
+            agency_id text NULL,
             agency_name text NOT NULL,
             agency_url text NOT NULL,
             agency_timezone text NOT NULL,
@@ -69,7 +69,8 @@ async fn makedb(client: &Client) {
             agency_phone text NULL,
             agency_fare_url text NULL,
             agency_email text NULL,
-            onestop_feed_id text UNIQUE NOT NULL
+            onestop_feed_id text NOT NULL
+            PRIMARY KEY (onestop_feed_id, agency_id)
         );
     ").await.unwrap();
     client.batch_execute("
@@ -345,7 +346,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE attributions (
             attribution_id text PRIMARY KEY,
-            agency_id text NOT NULL REFERENCES agency ON DELETE CASCADE ON UPDATE CASCADE,
+            agency_id text NOT NULL,
             route_onestop_feed_id text NULL,
             route_id text NULL,
             trip_id text NULL,
@@ -357,6 +358,7 @@ async fn makedb(client: &Client) {
             attribution_phone text NULL,
             attribution_email text NULL,
             onestop_feed_id text NOT NULL,
+            FOREIGN KEY (onestop_feed_id, agency_id) REFERENCES agency(onestop_feed_id, agency_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
