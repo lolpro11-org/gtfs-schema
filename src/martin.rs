@@ -12,23 +12,28 @@ async fn main() {
     });
 
     client.batch_execute("
-        CREATE OR REPLACE
-        FUNCTION shapes(z integer, x integer, y integer)
-            RETURNS bytea AS $$
+        CREATE OR REPLACE FUNCTION shapes(z integer, x integer, y integer)
+        RETURNS bytea AS $$
         DECLARE
-        mvt bytea;
+            mvt bytea;
         BEGIN
-        SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom') FROM (
-            SELECT
-            ST_AsMVTGeom(
-                ST_Transform(ST_CurveToLine(geom), 3857),
-                ST_TileEnvelope(z, x, y),
-                4096, 64, true) AS geom
-            FROM shapes
-            WHERE geom && ST_Transform(ST_TileEnvelope(z, x, y), 4326)
-        ) as tile WHERE geom IS NOT NULL;
+            SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom')
+            FROM (
+                SELECT
+                    ST_AsMVTGeom(
+                        ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857),
+                        ST_TileEnvelope(z, x, y),
+                        4096, 64, true
+                    ) AS geom,
+                    onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
+                FROM shapes
+                WHERE 
+                    (ST_GeomFromGeoJSON(shape_geojson::text) && ST_Transform(ST_TileEnvelope(z, x, y), 4326))
+                    AND (route_type = 3 OR route_type = 11 OR route_type = 200)
+            ) as tile 
+            WHERE geom IS NOT NULL;
 
-        RETURN mvt;
+            RETURN mvt;
         END
         $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
     ").await.unwrap();
