@@ -292,7 +292,7 @@ async fn makedb(client: &Client) {
             to_route_id text NULL,
             from_trip_id text NULL,
             to_trip_id text NULL,
-            FOREIGN KEY (onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (from_onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
