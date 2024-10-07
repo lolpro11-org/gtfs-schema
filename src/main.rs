@@ -190,7 +190,7 @@ async fn makedb(client: &Client) {
             price text NOT NULL, --double precision NOT NULL CHECK (price >= 0.0),
             currency_type text NOT NULL,
             payment_method integer NOT NULL CHECK (payment_method >= 0 AND payment_method <= 1),
-            transfers integer NULL CHECK (transfers >= 0 AND transfers <= 5),
+            transfers integer NULL CHECK (transfers >= 0),
             agency_id text NULL,
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL,
