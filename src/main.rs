@@ -7,13 +7,13 @@ use tokio::task;
 use tokio_postgres::{Client, NoTls};
 use serde_json::{json, Value};
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GeoJsonProperties {
     sequence: usize,
     dist_traveled: Option<f32>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GeoJsonPoint {
     #[serde(rename = "type")]
     type_: String,
@@ -21,7 +21,7 @@ struct GeoJsonPoint {
     properties: GeoJsonProperties,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct GeoJsonFeatureCollection {
     #[serde(rename = "type")]
     type_: String,
@@ -904,6 +904,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
             }
 
         }
+        eprintln!("features: {:#?}", features);
         for feature in &features {
             client.execute("
                 INSERT INTO shapes (
