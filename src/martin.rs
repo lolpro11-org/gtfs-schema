@@ -28,10 +28,9 @@ async fn main() {
                     onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
                 FROM shapes
                 WHERE 
-                    (ST_GeomFromGeoJSON(shape_geojson::text) && ST_Transform(ST_TileEnvelope(z, x, y), 4326))
-                    AND (route_type = 3 OR route_type = 11 OR route_type = 200)
-            ) as tile 
-            WHERE geom IS NOT NULL;
+                    ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857) && ST_TileEnvelope(z, x, y)
+            ) AS tile
+            WHERE tile.geom IS NOT NULL;
 
             RETURN mvt;
         END
