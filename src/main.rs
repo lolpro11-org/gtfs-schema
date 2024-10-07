@@ -136,7 +136,8 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE stop_times (
-            trip_id text NOT NULL REFERENCES trips(trip_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            trip_id text NOT NULL,
+            onestop_feed_id text NOT NULL,
             arrival_time interval NULL,
             departure_time interval NOT NULL,
             stop_id text NOT NULL REFERENCES stops(stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -148,8 +149,8 @@ async fn makedb(client: &Client) {
             continuous_drop_off integer NULL,
             shape_dist_traveled double precision NULL CHECK (shape_dist_traveled >= 0.0),
             timepoint boolean NULL,
-            onestop_feed_id text NOT NULL,
-            PRIMARY KEY (onestop_feed_id, trip_id)
+            PRIMARY KEY (onestop_feed_id, trip_id),  -- Composite primary key
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
