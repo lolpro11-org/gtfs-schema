@@ -890,7 +890,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
 async fn main() {
     let gtfs_dir = arguments::parse(std::env::args()).unwrap().get::<String>("dir").unwrap_or("./gtfs/".to_string());
 
-    let conn_string = "postgresql://postgres@password@localhost/postgres";
+    let conn_string = "postgresql://postgres:password@localhost/postgres";
     let (client, connection) = tokio_postgres::connect(&conn_string, NoTls).await.unwrap();
 
     tokio::spawn(async move {
