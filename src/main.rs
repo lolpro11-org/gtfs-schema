@@ -912,7 +912,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                 }));
             }
         }
-        eprintln!("features: {:#?}", features);
+        //eprintln!("features: {:#?}", features);
         for feature in &features {
             client.execute("
                 INSERT INTO shapes (
