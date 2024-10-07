@@ -5,19 +5,25 @@ use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, D
 use serde_derive::Serialize;
 use tokio::task;
 use tokio_postgres::{Client, NoTls};
-use serde_json::{json, Value};
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 struct GeoJsonProperties {
     sequence: usize,
     dist_traveled: Option<f32>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 struct GeoJsonPoint {
     #[serde(rename = "type")]
     type_: String,
     coordinates: [f64; 2],
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct GeoJsonFeature {
+    #[serde(rename = "type")]
+    type_: String,
+    geometry: GeoJsonPoint,
     properties: GeoJsonProperties,
 }
 
@@ -25,8 +31,9 @@ struct GeoJsonPoint {
 struct GeoJsonFeatureCollection {
     #[serde(rename = "type")]
     type_: String,
-    features: Vec<Value>,
+    features: Vec<GeoJsonFeature>,
 }
+
 
 async fn makedb(client: &Client) {
     client.batch_execute("
@@ -882,34 +889,50 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         for shapes in gtfs.shapes {
             let mut current_shape = shapes.1.first().unwrap().id.to_owned();
             let mut shape_vec = Vec::new();
+
             for shape in shapes.1 {
                 // Check if we have a new shape
                 if current_shape != shape.id {
-                    features.push((current_shape.clone(), GeoJsonFeatureCollection {
-                        type_: "FeatureCollection".to_string(),
-                        features: shape_vec.clone(),
-                    }));
+                    features.push((
+                        current_shape.clone(),
+                        GeoJsonFeatureCollection {
+                            type_: "FeatureCollection".to_string(),
+                            features: shape_vec.clone(),
+                        },
+                    ));
                     shape_vec.clear(); // Clear the shape_vec for the new shape
                     
                     current_shape = shape.id.to_owned();
                 }
+                
+                // Create the point feature
                 let point = GeoJsonPoint {
                     type_: "Point".to_string(),
                     coordinates: [shape.longitude, shape.latitude],
+                };
+
+                // Create the GeoJsonFeature
+                let feature = GeoJsonFeature {
+                    type_: "Feature".to_string(),
+                    geometry: point,
                     properties: GeoJsonProperties {
                         sequence: shape.sequence,
                         dist_traveled: shape.dist_traveled,
                     },
                 };
-                shape_vec.push(json!(point));
+
+                shape_vec.push(feature); // Push the feature to shape_vec
             }
 
             // Push the final shape after the loop
             if !shape_vec.is_empty() {
-                features.push((current_shape, GeoJsonFeatureCollection {
-                    type_: "FeatureCollection".to_string(),
-                    features: shape_vec,
-                }));
+                features.push((
+                    current_shape,
+                    GeoJsonFeatureCollection {
+                        type_: "FeatureCollection".to_string(),
+                        features: shape_vec,
+                    },
+                ));
             }
         }
         //eprintln!("features: {:#?}", features);
