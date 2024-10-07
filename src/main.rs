@@ -1005,7 +1005,9 @@ async fn main() {
                 let path = entry.path();            
                 if path.is_file() {
                     if let Some(file_name) = path.file_stem() {
-                        if file_name.to_str().is_some() {
+                        if let Some(file) = file_name.to_str().clone() {
+                            println!("Starting, {}", file);
+                            let file = file.to_string().clone();
                             let fut = async move {
                                 let conn_string = "postgresql://postgres:password@localhost/postgres";
                                 let (client, connection) = tokio_postgres::connect(&conn_string, NoTls).await.unwrap();
@@ -1016,6 +1018,7 @@ async fn main() {
                                     }
                                 });
                                 insertgtfs(&client, path).await;
+                                println!("Finished: {}", file);
                             };
                             futs.push(task::spawn(fut));
                             if futs.len() == 128 {
