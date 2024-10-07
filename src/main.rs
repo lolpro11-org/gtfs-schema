@@ -300,6 +300,7 @@ async fn makedb(client: &Client) {
         CREATE TABLE pathways (
             pathway_id text PRIMARY KEY,
             from_stop_id text NOT NULL,
+            to_stop_id text NOT NULL,
             to_onestop_feed_id text NOT NULL,
             pathway_mode integer NOT NULL CHECK (pathway_mode >= 1 AND pathway_mode <= 7),
             is_bidirectional boolean NOT NULL,
