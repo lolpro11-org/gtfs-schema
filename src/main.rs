@@ -928,7 +928,6 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
         }
         std::mem::drop(features);
         for fare_attribute in gtfs.fare_attributes {
-            let duration: u32 = fare_attribute.1.transfer_duration.unwrap().try_into().unwrap();
             client.execute("
                 INSERT INTO fare_attributes (
                     fare_id,
@@ -965,7 +964,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                         Transfers::Other(i16) => i16,
                     },
                     &fare_attribute.1.agency_id,
-                    &duration,
+                    &fare_attribute.1.transfer_duration.map(|x| x as i32),
                     &onestop_feed_id
                 ],
             ).await.unwrap();
