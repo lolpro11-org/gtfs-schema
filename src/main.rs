@@ -242,8 +242,10 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE stop_areas (
             area_id text NOT NULL REFERENCES areas ON DELETE CASCADE ON UPDATE CASCADE,
-            stop_id text NOT NULL REFERENCES stops ON DELETE CASCADE ON UPDATE CASCADE,
-            onestop_feed_id text NOT NULL
+            stop_id text NOT NULL,
+            onestop_feed_id text NOT NULL,
+            FOREIGN KEY (onestop_feed_id, stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCAD
+
         );
     ").await.unwrap();
     client.batch_execute("
