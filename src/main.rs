@@ -693,12 +693,12 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     platform_code = EXCLUDED.platform_code;",
                 &[
                     &stop.0,
-                    &stop.1.code.clone().unwrap(),
-                    &stop.1.name.clone().unwrap(),
+                    &stop.1.code.clone(),
+                    &stop.1.name.clone(),
                     &stop.1.tts_name.clone(),
                     &stop.1.description.clone(),
-                    &stop.1.latitude.clone().unwrap(),
-                    &stop.1.longitude.clone().unwrap(),
+                    &stop.1.latitude.clone(),
+                    &stop.1.longitude.clone(),
                     &stop.1.zone_id.clone(),
                     &stop.1.url.clone(),
                     &match stop.1.location_type.clone() {
@@ -755,14 +755,14 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &trip.1.route_id,
                     &trip.1.service_id,
                     &trip.0,
-                    &trip.1.trip_headsign.unwrap(),
-                    &trip.1.trip_short_name.unwrap(),
-                    &match trip.1.direction_id.unwrap() {
+                    &trip.1.trip_headsign,
+                    &trip.1.trip_short_name,
+                    &match trip.1.direction_id {
                         DirectionType::Outbound => 0_i32,
                         DirectionType::Inbound => 1,
                     },
-                    &trip.1.block_id.unwrap(),
-                    &trip.1.shape_id.unwrap(),
+                    &trip.1.block_id,
+                    &trip.1.shape_id,
                     &match trip.1.wheelchair_accessible {
                         Availability::InformationNotAvailable => 0,
                         Availability::Available => 1,
@@ -804,14 +804,14 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     agency_fare_url = EXCLUDED.agency_fare_url,
                     agency_email = EXCLUDED.agency_email;",
                 &[
-                    &agency.id.unwrap(),
+                    &agency.id,
                     &agency.name,
                     &agency.url,
                     &agency.timezone,
-                    &agency.lang.unwrap(),
-                    &agency.phone.unwrap(),
-                    &agency.fare_url.unwrap(),
-                    &agency.email.unwrap(),
+                    &agency.lang,
+                    &agency.phone,
+                    &agency.fare_url,
+                    &agency.email,
                     &onestop_feed_id
                 ]
             ).await.unwrap();
@@ -966,12 +966,12 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) {
                     &feed_info.name,
                     &feed_info.url,
                     &feed_info.lang,
-                    &feed_info.start_date.unwrap(),
-                    &feed_info.end_date.unwrap(),
-                    &feed_info.version.unwrap(),
-                    &feed_info.contact_email.unwrap(),
-                    &feed_info.contact_url.unwrap(),
-                    &feed_info.default_lang.unwrap(),
+                    &feed_info.start_date,
+                    &feed_info.end_date,
+                    &feed_info.version,
+                    &feed_info.contact_email,
+                    &feed_info.contact_url,
+                    &feed_info.default_lang,
                     &onestop_feed_id
                 ]
             ).await.unwrap();
