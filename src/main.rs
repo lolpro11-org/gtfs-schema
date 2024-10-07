@@ -130,7 +130,7 @@ async fn makedb(client: &Client) {
             trip_id text NOT NULL,
             trip_headsign text NULL,
             trip_short_name text NULL,
-            direction_id boolean NULL,
+            direction_id integer NULL CHECK (direction_id >= 0 AND direction_id <= 1),
             block_id text NULL,
             shape_id text NULL,
             wheelchair_accessible integer NULL CHECK (wheelchair_accessible >= 0 AND wheelchair_accessible <= 2),
