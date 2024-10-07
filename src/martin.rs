@@ -31,7 +31,6 @@ async fn main() {
                     ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857) && ST_TileEnvelope(z, x, y)
             ) AS tile
             WHERE tile.geom IS NOT NULL;
-
             RETURN mvt;
         END
         $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;

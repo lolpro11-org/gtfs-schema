@@ -909,7 +909,6 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                 INSERT INTO shapes (
                     shape_id,
                     shape_geojson,
-                    exception_type,
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3, $4
@@ -920,7 +919,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                 &[
                     &feature.0,
                     &serde_json::to_string(&feature.1).unwrap(),
-                    &onestop_feed_id
+                    &onestop_feed_id,
                 ],
             ).await?;
         }
