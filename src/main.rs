@@ -911,11 +911,10 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                     shape_geojson,
                     onestop_feed_id
                 ) VALUES (
-                    $1, $2, $3, $4
+                    $1, $2, $3
                 ) ON CONFLICT (onestop_feed_id, shape_id) 
                 DO UPDATE SET
-                    shape_geojson = EXCLUDED.shape_geojson,
-                    exception_type = EXCLUDED.exception_type;",
+                    shape_geojson = EXCLUDED.shape_geojson;",
                 &[
                     &feature.0,
                     &serde_json::to_string(&feature.1).unwrap(),
