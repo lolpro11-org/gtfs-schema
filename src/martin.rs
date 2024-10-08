@@ -12,26 +12,23 @@ async fn main() {
     });
 
     client.batch_execute("
-        CREATE OR REPLACE FUNCTION gtfs.shapes(z integer, x integer, y integer)
+        CREATE OR REPLACE
+        FUNCTION gtfs.shapes(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
-            mvt bytea;
+        mvt bytea;
         BEGIN
-            SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom')
-            FROM (
-                SELECT
-                    ST_AsMVTGeom(
-                        ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857),
-                        ST_TileEnvelope(z, x, y),
-                        4096, 64, true
-                    ) AS geom,
-                    onestop_feed_id, shape_id, shape_geojson
-                FROM gtfs.shapes
-                WHERE 
-                    ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857) && ST_TileEnvelope(z, x, y)
-            ) AS tile
-            WHERE tile.geom IS NOT NULL;
-            RETURN mvt;
+        SELECT INTO mvt ST_AsMVT(tile, 'notbus', 4096, 'geom') FROM (
+            SELECT
+            ST_AsMVTGeom(
+                ST_Transform(shape_linestring, 3857),
+                    ST_TileEnvelope(z, x, y),
+                    4096, 64, true) AS geom,
+                    onestop_feed_id, shape_id,
+                    FROM gtfs.shapes
+                    WHERE (shape_linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326))) 
+                as tile WHERE geom IS NOT NULL;
+        RETURN mvt;
         END
         $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
     ").await.unwrap();
