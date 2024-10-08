@@ -1,39 +1,11 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
+use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
 use futures::{stream::FuturesUnordered, StreamExt};
 use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
-use serde_derive::Serialize;
+use serde_json::json;
 use tokio::task;
 use tokio_postgres::{Client, NoTls};
-
-#[derive(Clone, Debug, Serialize)]
-struct GeoJsonProperties {
-    sequence: usize,
-    dist_traveled: Option<f32>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct GeoJsonPoint {
-    #[serde(rename = "type")]
-    type_: String,
-    coordinates: [f64; 2],
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct GeoJsonFeature {
-    #[serde(rename = "type")]
-    type_: String,
-    geometry: GeoJsonPoint,
-    properties: GeoJsonProperties,
-}
-
-#[derive(Debug, Serialize)]
-struct GeoJsonFeatureCollection {
-    #[serde(rename = "type")]
-    type_: String,
-    features: Vec<GeoJsonFeature>,
-}
-
 
 async fn makedb(client: &Client) {
     client.batch_execute("
@@ -886,56 +858,26 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
             ).await?;
         }
         let mut features = Vec::new();
-        for shapes in gtfs.shapes {
-            let mut current_shape = shapes.1.first().unwrap().id.to_owned();
-            let mut shape_vec = Vec::new();
-
-            for shape in shapes.1 {
-                // Check if we have a new shape
-                if current_shape != shape.id {
-                    features.push((
-                        current_shape.clone(),
-                        GeoJsonFeatureCollection {
-                            type_: "FeatureCollection".to_string(),
-                            features: shape_vec.clone(),
-                        },
-                    ));
-                    shape_vec.clear(); // Clear the shape_vec for the new shape
-                    
-                    current_shape = shape.id.to_owned();
-                }
-                
-                // Create the point feature
-                let point = GeoJsonPoint {
-                    type_: "Point".to_string(),
-                    coordinates: [shape.longitude, shape.latitude],
-                };
-
-                // Create the GeoJsonFeature
-                let feature = GeoJsonFeature {
-                    type_: "Feature".to_string(),
-                    geometry: point,
-                    properties: GeoJsonProperties {
-                        sequence: shape.sequence,
-                        dist_traveled: shape.dist_traveled,
-                    },
-                };
-
-                shape_vec.push(feature); // Push the feature to shape_vec
-            }
-
-            // Push the final shape after the loop
-            if !shape_vec.is_empty() {
-                features.push((
-                    current_shape,
-                    GeoJsonFeatureCollection {
-                        type_: "FeatureCollection".to_string(),
-                        features: shape_vec,
-                    },
-                ));
-            }
+        // Iterate through all shapes in the GTFS data
+        for (shape_id, shape) in &gtfs.shapes {
+            let coordinates: Vec<Vec<f64>> = shape
+                .into_iter()
+                .map(|shape| vec![shape.longitude, shape.latitude])
+                .collect();
+    
+            // Create a GeoJSON LineString geometry for each shape
+            let geometry = Geometry::new(Value::LineString(coordinates));
+            let feature = Feature {
+                geometry: Some(geometry),
+                properties: Some(json!({ "shape_id": shape_id }).as_object().unwrap().clone()),
+                ..Default::default()
+            };
+            features.push(feature);
         }
-        //eprintln!("features: {:#?}", features);
+        let feature_collection = FeatureCollection {
+            features,
+            ..Default::default()
+        };
         for feature in &features {
             client.execute("
                 INSERT INTO shapes (
@@ -949,7 +891,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                     shape_geojson = EXCLUDED.shape_geojson;",
                 &[
                     &feature.0,
-                    &serde_json::to_value(&feature.1.features.clone().into_iter().map(|geo| geo.geometry).collect::<Vec<GeoJsonPoint>>()).unwrap(),
+                    &serde_json::to_value(&feature.1).unwrap(),
                     &onestop_feed_id,
                 ],
             ).await?;
