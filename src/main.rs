@@ -949,7 +949,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                     shape_geojson = EXCLUDED.shape_geojson;",
                 &[
                     &feature.0,
-                    &serde_json::to_value(&feature.1.features).unwrap(),
+                    &serde_json::to_value(&feature.1.features.clone().into_iter().map(|geo| geo.geometry).collect::<Vec<GeoJsonPoint>>()).unwrap(),
                     &onestop_feed_id,
                 ],
             ).await?;
@@ -1095,7 +1095,6 @@ async fn main() {
                 if path.is_file() {
                     if let Some(file_name) = path.file_stem() {
                         if let Some(file) = file_name.to_str().clone() {
-                            println!("Starting, {}", file);
                             let file = file.to_string().clone();
                             let fut = async move {
                                 let conn_string = "postgresql://postgres:password@localhost/postgres";
