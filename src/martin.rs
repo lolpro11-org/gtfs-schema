@@ -12,7 +12,7 @@ async fn main() {
     });
 
     client.batch_execute("
-        CREATE OR REPLACE FUNCTION shapes(z integer, x integer, y integer)
+        CREATE OR REPLACE FUNCTION gtfs.shapes(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
             mvt bytea;
@@ -38,7 +38,7 @@ async fn main() {
 
     client.batch_execute("
         CREATE OR REPLACE
-        FUNCTION busonly(z integer, x integer, y integer)
+        FUNCTION gtfs. busonly(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
         mvt bytea;
@@ -61,7 +61,7 @@ async fn main() {
 
     client.batch_execute("
         CREATE OR REPLACE
-        FUNCTION notbus(z integer, x integer, y integer)
+        FUNCTION gtfs. notbus(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
         mvt bytea;
@@ -84,7 +84,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION localrail(z integer, x integer, y integer)
+    FUNCTION gtfs. localrail(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -107,7 +107,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION intercityrail(z integer, x integer, y integer)
+    FUNCTION gtfs. intercityrail(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -130,7 +130,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION other(z integer, x integer, y integer)
+    FUNCTION gtfs. other(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -153,7 +153,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION stationfeatures(z integer, x integer, y integer)
+    FUNCTION gtfs. stationfeatures(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -176,7 +176,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION busstops(z integer, x integer, y integer)
+    FUNCTION gtfs. busstops(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -199,7 +199,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION railstops(z integer, x integer, y integer)
+    FUNCTION gtfs. railstops(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
@@ -222,7 +222,7 @@ async fn main() {
 
     client.batch_execute("
     CREATE OR REPLACE
-    FUNCTION otherstops(z integer, x integer, y integer)
+    FUNCTION gtfs. otherstops(z integer, x integer, y integer)
     RETURNS bytea AS $$
     DECLARE
     mvt bytea;
