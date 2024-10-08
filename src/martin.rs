@@ -26,7 +26,7 @@ async fn main() {
                         4096, 64, true
                     ) AS geom,
                     onestop_feed_id, shape_id, shape_geojson
-                FROM shapes
+                FROM gtfs.shapes
                 WHERE 
                     ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857) && ST_TileEnvelope(z, x, y)
             ) AS tile
@@ -50,7 +50,7 @@ async fn main() {
                             ST_TileEnvelope(z, x, y),
                             4096, 64, true) AS geom,
                             onestop_feed_id, shape_id, color, routes, route_type, route_label, text_color
-                            FROM shapes
+                            FROM gtfs.shapes
                             WHERE (shape_geojson && ST_Transform(ST_TileEnvelope(z, x, y), 4326)) AND (route_type = 3 OR route_type = 11 OR route_type = 200)
         ) as tile WHERE geom IS NOT NULL;
 
