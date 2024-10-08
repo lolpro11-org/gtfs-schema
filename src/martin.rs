@@ -21,14 +21,14 @@ async fn main() {
             FROM (
                 SELECT
                     ST_AsMVTGeom(
-                        ST_Transform(ST_GeomFromGeoJSON(shape_geojson), 3857),
+                        ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857),
                         ST_TileEnvelope(z, x, y),
                         4096, 64, true
                     ) AS geom,
                     onestop_feed_id, shape_id, shape_geojson
                 FROM shapes
                 WHERE 
-                    ST_Transform(ST_GeomFromGeoJSON(shape_geojson), 3857) && ST_TileEnvelope(z, x, y)
+                    ST_Transform(ST_GeomFromGeoJSON(shape_geojson::text), 3857) && ST_TileEnvelope(z, x, y)
             ) AS tile
             WHERE tile.geom IS NOT NULL;
             RETURN mvt;
