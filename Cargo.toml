@@ -9,6 +9,7 @@ edition = "2021"
 arguments = "0.7.2"
 async-recursion = "1.1.0"
 futures = "0.3.30"
+geojson = "0.24.1"
 gtfs-structures = "0.41.1"
 regress = "0.10.1"
 reqwest = {version = "0.12.1", default-features = false, features = ["cookies", "gzip", "http2", "brotli", "rustls-tls", "deflate"]}

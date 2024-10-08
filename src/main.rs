@@ -872,12 +872,8 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                 properties: Some(json!({ "shape_id": shape_id }).as_object().unwrap().clone()),
                 ..Default::default()
             };
-            features.push(feature);
+            features.push((shape_id, feature));
         }
-        let feature_collection = FeatureCollection {
-            features,
-            ..Default::default()
-        };
         for feature in &features {
             client.execute("
                 INSERT INTO shapes (
