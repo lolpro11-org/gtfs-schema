@@ -655,6 +655,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "geo-postgis"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90fdc8b3bd7e9f4c91b8e69b508cd8a5520b83bad3e4a94b8e08a2b184a152b8"
+dependencies = [
+ "geo-types",
+ "postgis",
+]
+
+[[package]]
 name = "geo-types"
 version = "0.7.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -713,6 +723,7 @@ dependencies = [
  "async-recursion",
  "futures",
  "geo",
+ "geo-postgis",
  "geojson",
  "gtfs-structures",
  "regress",
@@ -1358,6 +1369,17 @@ name = "pkg-config"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
+
+[[package]]
+name = "postgis"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b52406590b7a682cadd0f0339c43905eb323568e84a2e97e855ef92645e0ec09"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "postgres-types",
+]
 
 [[package]]
 name = "postgres-protocol"

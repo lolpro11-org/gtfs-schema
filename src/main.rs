@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
 use futures::{stream::FuturesUnordered, StreamExt};
+use geo_postgis::ToPostgis;
 use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
 use tokio::task;
 use tokio_postgres::{Client, NoTls};
@@ -880,7 +881,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
                     shape_linestring = EXCLUDED.shape_linestring;",
                 &[
                     &feature.0,
-                    &feature.1,
+                    &feature.1.to_postgis_wgs84(),
                     &onestop_feed_id,
                 ],
             ).await?;
