@@ -1,5 +1,6 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
+use geo::coord;
 use geojson::{Geometry, Value};
 use futures::{stream::FuturesUnordered, StreamExt};
 use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
@@ -250,7 +251,7 @@ async fn makedb(client: &Client) {
     client.batch_execute("
         CREATE TABLE gtfs.shapes (
             shape_id text NOT NULL,
-            shape_geojson JSONB NOT NULL,
+            shape_linestring GEOMETRY(LINESTRING,4326) NOT NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, shape_id)
         );
@@ -859,29 +860,29 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         let mut features = Vec::new();
         // Iterate through all shapes in the GTFS data
         for (shape_id, shape) in &gtfs.shapes {
-            let coordinates: Vec<Vec<f64>> = shape
+            let coordinates: Vec<(f64, f64)> = shape
                 .into_iter()
-                .map(|shape| vec![shape.longitude, shape.latitude])
+                .map(|shape| (shape.longitude, shape.latitude))
                 .collect();
     
             // Create a GeoJSON LineString geometry for each shape
-            let geometry = Geometry::new(Value::LineString(coordinates));
+            let geometry = geo::LineString::from(coordinates);
             features.push((shape_id, geometry));
         }
         for feature in &features {
             client.execute("
                 INSERT INTO gtfs.shapes (
                     shape_id,
-                    shape_geojson,
+                    shape_linestring,
                     onestop_feed_id
                 ) VALUES (
                     $1, $2, $3
                 ) ON CONFLICT (onestop_feed_id, shape_id) 
                 DO UPDATE SET
-                    shape_geojson = EXCLUDED.shape_geojson;",
+                    shape_linestring = EXCLUDED.shape_linestring;",
                 &[
                     &feature.0,
-                    &serde_json::to_value(&feature.1).unwrap(),
+                    &feature.1,
                     &onestop_feed_id,
                 ],
             ).await?;
