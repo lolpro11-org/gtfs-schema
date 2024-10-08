@@ -1,9 +1,8 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
-use geojson::{Feature, FeatureCollection, GeoJson, Geometry, Value};
+use geojson::{Geometry, Value};
 use futures::{stream::FuturesUnordered, StreamExt};
 use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
-use serde_json::json;
 use tokio::task;
 use tokio_postgres::{Client, NoTls};
 
@@ -12,36 +11,36 @@ async fn makedb(client: &Client) {
         CREATE EXTENSION IF NOT EXISTS postgis;
         CREATE EXTENSION IF NOT EXISTS hstore;
     ").await.unwrap();
-
+    client.batch_execute("CREATE SCHEMA gtfs;").await.unwrap();
     client.batch_execute("
     DROP TABLE IF EXISTS
-        agency,
-        stops,
-        routes,
-        trips,
-        stop_times,
-        attributions,
-        calendar,
-        calendar_dates,
-        fare_attributes,
-        fare_rules,
-        fare_media,
-        fare_products,
-        areas,
-        stop_areas,
-        networks,
-        route_networks,
-        shapes,
-        frequencies,
-        timeframes,
-        transfers,
-        pathways,
-        levels,
-        feed_info,
-        translations;
+        gtfs.agency,
+        gtfs.stops,
+        gtfs.routes,
+        gtfs.trips,
+        gtfs.stop_times,
+        gtfs.attributions,
+        gtfs.calendar,
+        gtfs.calendar_dates,
+        gtfs.fare_attributes,
+        gtfs.fare_rules,
+        gtfs.fare_media,
+        gtfs.fare_products,
+        gtfs.areas,
+        gtfs.stop_areas,
+        gtfs.networks,
+        gtfs.route_networks,
+        gtfs.shapes,
+        gtfs.frequencies,
+        gtfs.timeframes,
+        gtfs.transfers,
+        gtfs.pathways,
+        gtfs.levels,
+        gtfs.feed_info,
+        gtfs.translations;
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE agency (
+        CREATE TABLE gtfs.agency (
             agency_id text NULL,
             agency_name text NOT NULL,
             agency_url text NOT NULL,
@@ -54,7 +53,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE levels (
+        CREATE TABLE gtfs.levels (
             level_id text PRIMARY KEY,
             level_index double precision NOT NULL,
             level_name text NULL,
@@ -62,7 +61,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE stops (
+        CREATE TABLE gtfs.stops (
             stop_id text NOT NULL,
             stop_code text NULL,
             stop_name text NULL CHECK (location_type >= 0 AND location_type <= 2 AND stop_name IS NOT NULL OR location_type > 2),
@@ -83,7 +82,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE routes (
+        CREATE TABLE gtfs.routes (
             route_id text,
             agency_id text NULL,
             route_short_name text NULL,
@@ -102,7 +101,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE trips (
+        CREATE TABLE gtfs.trips (
             route_id text NOT NULL,
             service_id text NOT NULL,
             trip_id text NOT NULL,
@@ -119,7 +118,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE stop_times (
+        CREATE TABLE gtfs.stop_times (
             trip_id text NOT NULL,
             onestop_feed_id text NOT NULL,
             arrival_time interval NULL,
@@ -139,7 +138,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE calendar (
+        CREATE TABLE gtfs.calendar (
             service_id text NOT NULL,
             monday boolean NOT NULL,
             tuesday boolean NOT NULL,
@@ -155,7 +154,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE calendar_dates (
+        CREATE TABLE gtfs.calendar_dates (
             service_id text NOT NULL,
             date date NOT NULL,
             exception_type integer NOT NULL CHECK (exception_type >= 1 AND exception_type <= 2),
@@ -164,7 +163,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE fare_attributes (
+        CREATE TABLE gtfs.fare_attributes (
             fare_id text NOT NULL,
             price text NOT NULL, --double precision NOT NULL CHECK (price >= 0.0),
             currency_type text NOT NULL,
@@ -178,7 +177,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE fare_rules (
+        CREATE TABLE gtfs.fare_rules (
             fare_id text NOT NULL,
             route_id text NULL,
             origin_id text NULL,
@@ -191,7 +190,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE timeframes (
+        CREATE TABLE gtfs.timeframes (
             timeframe_group_id text NOT NULL,
             start_time interval NULL,
             end_time interval NULL,
@@ -201,7 +200,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE fare_media (
+        CREATE TABLE gtfs.fare_media (
             fare_media_id text PRIMARY KEY,
             fare_media_name text NULL,
             fare_media_type integer NOT NULL,
@@ -219,14 +218,14 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE areas (
+        CREATE TABLE gtfs.areas (
             area_id text PRIMARY KEY,
             area_name text NULL,
             onestop_feed_id text NOT NULL
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE stop_areas (
+        CREATE TABLE gtfs.stop_areas (
             area_id text NOT NULL REFERENCES areas ON DELETE CASCADE ON UPDATE CASCADE,
             stop_id text NOT NULL,
             onestop_feed_id text NOT NULL,
@@ -234,14 +233,14 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE networks (
+        CREATE TABLE gtfs.networks (
             network_id text PRIMARY KEY,
             network_name text NULL,
             onestop_feed_id text NOT NULL
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE route_networks (
+        CREATE TABLE gtfs.route_networks (
             network_id text NOT NULL REFERENCES networks ON DELETE CASCADE ON UPDATE CASCADE,
             route_id text NOT NULL,
             onestop_feed_id text NOT NULL,
@@ -249,7 +248,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE shapes (
+        CREATE TABLE gtfs.shapes (
             shape_id text NOT NULL,
             shape_geojson JSONB NOT NULL,
             onestop_feed_id text NOT NULL,
@@ -257,7 +256,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE frequencies (
+        CREATE TABLE gtfs.frequencies (
             trip_id text NOT NULL,
             start_time interval NOT NULL,
             end_time interval NOT NULL,
@@ -268,7 +267,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE transfers (
+        CREATE TABLE gtfs.transfers (
             from_onestop_feed_id text NOT NULL,
             from_stop_id text NOT NULL,
             to_onestop_feed_id text NOT NULL,
@@ -284,7 +283,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE pathways (
+        CREATE TABLE gtfs.pathways (
             pathway_id text PRIMARY KEY,
             from_stop_id text NOT NULL,
             to_stop_id text NOT NULL,
@@ -304,7 +303,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE feed_info (
+        CREATE TABLE gtfs.feed_info (
             feed_publisher_name text NOT NULL,
             feed_publisher_url text NOT NULL,
             feed_lang text NOT NULL,
@@ -318,7 +317,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE translations (
+        CREATE TABLE gtfs.translations (
             table_name text NOT NULL,
             field_name text NOT NULL,
             language text NOT NULL,
@@ -330,7 +329,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE attributions (
+        CREATE TABLE gtfs.attributions (
             attribution_id text PRIMARY KEY,
             agency_id text NOT NULL,
             route_onestop_feed_id text NULL,
@@ -352,7 +351,7 @@ async fn makedb(client: &Client) {
     
     client.batch_execute("
         CREATE OR REPLACE
-        FUNCTION busonly(z integer, x integer, y integer)
+        FUNCTION gtfs.busonly(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
         mvt bytea;
@@ -375,7 +374,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION notbus(z integer, x integer, y integer)
+            FUNCTION gtfs.notbus(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -398,7 +397,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION localrail(z integer, x integer, y integer)
+            FUNCTION gtfs.localrail(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -421,7 +420,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION intercityrail(z integer, x integer, y integer)
+            FUNCTION gtfs.intercityrail(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -444,7 +443,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION other(z integer, x integer, y integer)
+            FUNCTION gtfs.other(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -467,7 +466,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION stationfeatures(z integer, x integer, y integer)
+            FUNCTION gtfs.stationfeatures(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -490,7 +489,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION busstops(z integer, x integer, y integer)
+            FUNCTION gtfs.busstops(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -513,7 +512,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION railstops(z integer, x integer, y integer)
+            FUNCTION gtfs.railstops(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -536,7 +535,7 @@ async fn makedb(client: &Client) {
     
         client.batch_execute("
             CREATE OR REPLACE
-            FUNCTION otherstops(z integer, x integer, y integer)
+            FUNCTION gtfs.otherstops(z integer, x integer, y integer)
             RETURNS bytea AS $$
             DECLARE
             mvt bytea;
@@ -566,7 +565,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
 
         for agency in gtfs.agencies {
             client.execute("
-                INSERT INTO agency (
+                INSERT INTO gtfs.agency (
                     agency_id,
                     agency_name,
                     agency_url,
@@ -602,7 +601,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for calendar in gtfs.calendar  {
             client.execute("
-                INSERT INTO calendar (
+                INSERT INTO gtfs.calendar (
                     service_id,
                     monday,
                     tuesday,
@@ -646,7 +645,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         for calendar_date in gtfs.calendar_dates {
             for date in calendar_date.1 {
                 client.execute("
-                    INSERT INTO calendar_dates (
+                    INSERT INTO gtfs.calendar_dates (
                         service_id,
                         date,
                         exception_type,
@@ -671,7 +670,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for stop in gtfs.stops {
             client.execute("
-                INSERT INTO stops (
+                INSERT INTO gtfs.stops (
                     stop_id,
                     stop_code,
                     stop_name,
@@ -740,7 +739,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for route in gtfs.routes {
             client.execute("
-                INSERT INTO routes (
+                INSERT INTO gtfs.routes (
                     route_id,
                     agency_id,
                     route_short_name,
@@ -801,7 +800,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for trip in gtfs.trips {
             client.execute("
-                INSERT INTO trips (
+                INSERT INTO gtfs.trips (
                     route_id,
                     service_id,
                     trip_id,
@@ -871,7 +870,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for feature in &features {
             client.execute("
-                INSERT INTO shapes (
+                INSERT INTO gtfs.shapes (
                     shape_id,
                     shape_geojson,
                     onestop_feed_id
@@ -890,7 +889,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         std::mem::drop(features);
         for fare_attribute in gtfs.fare_attributes {
             client.execute("
-                INSERT INTO fare_attributes (
+                INSERT INTO gtfs.fare_attributes (
                     fare_id,
                     price,
                     currency_type,
@@ -933,7 +932,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         for fare_rule in gtfs.fare_rules {
             for rule in fare_rule.1 {
                 client.execute("
-                    INSERT INTO fare_rules (
+                    INSERT INTO gtfs.fare_rules (
                         fare_id,
                         route_id,
                         origin_id,
@@ -962,7 +961,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
         }
         for feed_info in gtfs.feed_info {
             client.execute("
-                INSERT INTO feed_info (
+                INSERT INTO gtfs.feed_info (
                     feed_publisher_name,
                     feed_publisher_url,
                     feed_lang,
