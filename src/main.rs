@@ -1,7 +1,5 @@
 use std::{fs, path::PathBuf};
 mod dmfr;
-use geo::coord;
-use geojson::{Geometry, Value};
 use futures::{stream::FuturesUnordered, StreamExt};
 use gtfs_structures::{Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, Exception, Gtfs, LocationType, PaymentMethod, RouteType, Transfers};
 use tokio::task;
@@ -209,7 +207,7 @@ async fn makedb(client: &Client) {
         );
     ").await.unwrap();
     client.batch_execute("
-        CREATE TABLE fare_products (
+        CREATE TABLE gtfs.fare_products (
             fare_product_id text PRIMARY KEY,
             fare_product_name text NULL,
             fare_media_id text REFERENCES gtfs.fare_media ON DELETE CASCADE ON UPDATE CASCADE,
