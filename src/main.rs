@@ -867,12 +867,7 @@ async fn insertgtfs(client: &Client, gtfs: PathBuf) -> Result<(), tokio_postgres
     
             // Create a GeoJSON LineString geometry for each shape
             let geometry = Geometry::new(Value::LineString(coordinates));
-            let feature = Feature {
-                geometry: Some(geometry),
-                properties: Some(json!({ "shape_id": shape_id }).as_object().unwrap().clone()),
-                ..Default::default()
-            };
-            features.push((shape_id, feature));
+            features.push((shape_id, geometry));
         }
         for feature in &features {
             client.execute("
