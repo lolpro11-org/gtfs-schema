@@ -11,7 +11,7 @@ async fn makedb(client: &Client) {
         CREATE EXTENSION IF NOT EXISTS postgis;
         CREATE EXTENSION IF NOT EXISTS hstore;
     ").await.unwrap();
-    client.batch_execute("CREATE SCHEMA gtfs;").await.unwrap();
+    client.batch_execute("DROP SCHEMA gtfs;CREATE SCHEMA gtfs;").await.unwrap();
     client.batch_execute("
     DROP TABLE IF EXISTS
         gtfs.agency,
