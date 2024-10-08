@@ -75,7 +75,7 @@ async fn makedb(client: &Client) {
             parent_station text NULL CHECK (location_type IS NULL OR location_type = 0 OR location_type = 1 AND parent_station IS NULL OR location_type >= 2 AND location_type <= 4 AND parent_station IS NOT NULL),
             stop_timezone text NULL,
             wheelchair_boarding integer NULL CHECK (wheelchair_boarding >= 0 AND wheelchair_boarding <= 2 OR wheelchair_boarding IS NULL),
-            level_id text NULL, --REFERENCES levels ON DELETE CASCADE ON UPDATE CASCADE,
+            level_id text NULL, --REFERENCES gtfs.levels ON DELETE CASCADE ON UPDATE CASCADE,
             platform_code text NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, stop_id)
@@ -97,7 +97,7 @@ async fn makedb(client: &Client) {
             continuous_drop_off integer NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, route_id)
-            --FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
+            --FOREIGN KEY (agency_id) REFERENCES gtfs.agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -114,7 +114,7 @@ async fn makedb(client: &Client) {
             bikes_allowed integer NULL CHECK (bikes_allowed >= 0 AND bikes_allowed <= 2),
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, trip_id),
-            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES gtfs.routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -133,8 +133,8 @@ async fn makedb(client: &Client) {
             shape_dist_traveled double precision NULL CHECK (shape_dist_traveled >= 0.0),
             timepoint boolean NULL,
             PRIMARY KEY (onestop_feed_id, trip_id),
-            FOREIGN KEY (onestop_feed_id, stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES gtfs.trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -173,7 +173,7 @@ async fn makedb(client: &Client) {
             transfer_duration integer NULL CHECK (transfer_duration >= 0),
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id)
-            --FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
+            --FOREIGN KEY (agency_id) REFERENCES gtfs.agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -185,8 +185,8 @@ async fn makedb(client: &Client) {
             contains_id text NULL,
             onestop_feed_id text NOT NULL,
             PRIMARY KEY (onestop_feed_id, fare_id),
-            FOREIGN KEY (onestop_feed_id, fare_id) REFERENCES fare_attributes(onestop_feed_id, fare_id) ON DELETE CASCADE ON UPDATE CASCADE
-            --FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, fare_id) REFERENCES gtfs.fare_attributes(onestop_feed_id, fare_id) ON DELETE CASCADE ON UPDATE CASCADE
+            --FOREIGN KEY (onestop_feed_id, route_id) REFERENCES gtfs.routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -196,7 +196,7 @@ async fn makedb(client: &Client) {
             end_time interval NULL,
             service_id text NOT NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, service_id) REFERENCES calendar(onestop_feed_id, service_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, service_id) REFERENCES gtfs.calendar(onestop_feed_id, service_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -211,7 +211,7 @@ async fn makedb(client: &Client) {
         CREATE TABLE fare_products (
             fare_product_id text PRIMARY KEY,
             fare_product_name text NULL,
-            fare_media_id text REFERENCES fare_media ON DELETE CASCADE ON UPDATE CASCADE,
+            fare_media_id text REFERENCES gtfs.fare_media ON DELETE CASCADE ON UPDATE CASCADE,
             amount text NOT NULL,
             currency text NOT NULL,
             onestop_feed_id text NOT NULL
@@ -226,10 +226,10 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE gtfs.stop_areas (
-            area_id text NOT NULL REFERENCES areas ON DELETE CASCADE ON UPDATE CASCADE,
+            area_id text NOT NULL REFERENCES gtfs.areas ON DELETE CASCADE ON UPDATE CASCADE,
             stop_id text NOT NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -241,10 +241,10 @@ async fn makedb(client: &Client) {
     ").await.unwrap();
     client.batch_execute("
         CREATE TABLE gtfs.route_networks (
-            network_id text NOT NULL REFERENCES networks ON DELETE CASCADE ON UPDATE CASCADE,
+            network_id text NOT NULL REFERENCES gtfs.networks ON DELETE CASCADE ON UPDATE CASCADE,
             route_id text NOT NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, route_id) REFERENCES gtfs.routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -263,7 +263,7 @@ async fn makedb(client: &Client) {
             headway_secs integer NOT NULL CHECK (headway_secs >= 0),
             exact_times boolean NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES gtfs.trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -278,8 +278,8 @@ async fn makedb(client: &Client) {
             to_route_id text NULL,
             from_trip_id text NULL,
             to_trip_id text NULL,
-            FOREIGN KEY (from_onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (from_onestop_feed_id, from_stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -298,8 +298,8 @@ async fn makedb(client: &Client) {
             signposted_as text NULL,
             reversed_signposted_as text NULL,
             onestop_feed_id text NOT NULL,
-            FOREIGN KEY (onestop_feed_id, from_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
+            FOREIGN KEY (onestop_feed_id, from_stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (to_onestop_feed_id, to_stop_id) REFERENCES gtfs.stops(onestop_feed_id, stop_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     client.batch_execute("
@@ -343,9 +343,9 @@ async fn makedb(client: &Client) {
             attribution_phone text NULL,
             attribution_email text NULL,
             onestop_feed_id text NOT NULL,
-            --FOREIGN KEY (agency_id) REFERENCES agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
+            --FOREIGN KEY (agency_id) REFERENCES gtfs.agency(onestop_feed_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (route_onestop_feed_id, route_id) REFERENCES gtfs.routes(onestop_feed_id, route_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (onestop_feed_id, trip_id) REFERENCES gtfs.trips(onestop_feed_id, trip_id) ON DELETE CASCADE ON UPDATE CASCADE
         );
     ").await.unwrap();
     
