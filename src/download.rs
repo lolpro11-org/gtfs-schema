@@ -4,7 +4,8 @@ use async_recursion::async_recursion;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use reqwest::Client;
-use std::{collections::HashSet, fs::{self, File}, io::Write, path::PathBuf, time::Duration};
+use tokio::{fs::{self, File}, io::AsyncWriteExt};
+use std::{collections::HashSet, path::PathBuf, time::Duration};
 
 #[async_recursion]
 async fn getstatic(client: &Client, feed: String, url: String) {
@@ -28,10 +29,10 @@ async fn getstatic(client: &Client, feed: String, url: String) {
 
         match response {
             Ok(response) => {
-                let mut out = File::create(format!("gtfs/{}.zip", &feed)).expect("failed to create file");
+                let mut out = File::create(format!("gtfs/{}.zip", &feed)).await.expect("failed to create file");
                 let bytes_result = response.bytes().await;
                 if bytes_result.is_ok() {
-                    out.write(&bytes_result.unwrap()).unwrap();
+                    out.write(&bytes_result.unwrap()).await.unwrap();
                     println!("Finished writing {}", &feed);
                 }
                 break;
@@ -48,12 +49,13 @@ async fn getstatic(client: &Client, feed: String, url: String) {
 async fn main() {
     let threads = 100;
     let dir = "transitland-atlas/feeds/";
-    fs::create_dir("gtfs").unwrap_or_default();
+    fs::create_dir("gtfs").await.unwrap_or_default();
     let mut urls = vec![("f-anteaterexpress".to_string(), "https://raw.githubusercontent.com/lolpro11/gtfs-schema/main/f-anteaterexpress.zip".to_string())];
-    for entry in fs::read_dir(dir).unwrap() {
-        let path = entry.unwrap().path();
+    let mut entries = fs::read_dir(dir).await.unwrap();
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let json = fs::read_to_string(&path).unwrap();
+            let json = fs::read_to_string(&path).await.unwrap();
             let domain: DistributedMobilityFeedRegistry = serde_json::from_str(&json).unwrap();
             for feed in domain.feeds {
                 if feed.spec == FeedSpec::Gtfs {
@@ -85,21 +87,17 @@ async fn main() {
     }
 
     let mut downloaded = HashSet::new();
-    if let Ok(entries) = fs::read_dir("gtfs") {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let file_name = entry.file_name();
-                let file_path = PathBuf::from(&file_name);
-                
-                if let Some(file_stem) = file_path.file_stem() {
-                    if let Some(file_stem_str) = file_stem.to_str() {
-                        downloaded.insert(file_stem_str.to_string());
-                    }
-                }
+    let mut entries = fs::read_dir(dir).await.expect("Error reading directory");
+    while let Ok(Some(entry)) = entries.next_entry().await {
+
+        let file_name = entry.file_name();
+        let file_path = PathBuf::from(&file_name);
+        
+        if let Some(file_stem) = file_path.file_stem() {
+            if let Some(file_stem_str) = file_stem.to_str() {
+                downloaded.insert(file_stem_str.to_string());
             }
         }
-    } else {
-        eprintln!("Error reading directory");
     }
 
     let mut missing =  Vec::new();
