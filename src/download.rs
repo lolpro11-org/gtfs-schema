@@ -50,7 +50,7 @@ async fn main() {
     let threads = 100;
     let dir = "transitland-atlas/feeds/";
     fs::create_dir("gtfs").await.unwrap_or_default();
-    let mut urls = vec![("f-anteaterexpress".to_string(), "https://raw.githubusercontent.com/lolpro11/gtfs-schema/main/f-anteaterexpress.zip".to_string())];
+    let mut urls = Vec::new(); 
     let mut entries = fs::read_dir(dir).await.unwrap();
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
