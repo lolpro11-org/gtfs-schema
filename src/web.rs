@@ -1,5 +1,3 @@
-use actix_web::middleware::DefaultHeaders;
-
 pub fn parse_rgb_string(color: &str) -> Result<Rgb<u8>, String> {
     if color.starts_with("rgb(") && color.ends_with(")") {
         let inner = &color[4..color.len() - 1];
@@ -12,6 +10,15 @@ pub fn parse_rgb_string(color: &str) -> Result<Rgb<u8>, String> {
         }
     }
     Err("Invalid color format. Expected format: rgb(r,g,b)".to_string())
+}
+
+pub fn availability_from_i32(i: i32) -> Availability {
+    match i {
+        0 => Availability::InformationNotAvailable,
+        1 => Availability::Available,
+        2 => Availability::NotAvailable,
+        other => Availability::Unknown(other.try_into().unwrap())
+    }
 }
 
 mod errors {
@@ -46,10 +53,10 @@ mod errors {
 
 mod db {
     use deadpool_postgres::Client;
-    use gtfs_structures::{Agency, Availability, ContinuousPickupDropOff, LocationType, Route, RouteType, Stop};
+    use gtfs_structures::{Agency, Availability, BikesAllowedType, ContinuousPickupDropOff, DirectionType, LocationType, Route, RouteType, Stop, Trip};
     use qstring::QString;
 
-    use crate::{errors::MyError, parse_rgb_string};
+    use crate::{availability_from_i32, errors::MyError, parse_rgb_string};
 
     pub async fn agency(client: &Client, onestop_feed_id: String, qs: QString) -> Result<Vec<Agency>, MyError> {
         let stmt = "SELECT * 
@@ -151,12 +158,7 @@ mod db {
                 longitude: row.get("stop_lat"),
                 latitude: row.get("stop_lon"),
                 timezone: row.get("stop_timezone"),
-                wheelchair_boarding: match row.get("wheelchair_boarding") {
-                    0 => Availability::InformationNotAvailable,
-                    1 => Availability::Available,
-                    2 => Availability::NotAvailable,
-                    other => Availability::Unknown(other)
-                },
+                wheelchair_boarding: availability_from_i32(row.get("wheelchair_boarding")),
                 level_id: row.get("level_id"),
                 platform_code: row.get("platform_code"),
                 transfers: vec![],
@@ -244,6 +246,64 @@ mod db {
         
         Ok(results)
     }
+
+    pub async fn trips(client: &Client, onestop_feed_id: String, qs: QString) -> Result<Vec<Trip>, MyError> {
+        let stmt = "SELECT * 
+        FROM gtfs.routes 
+        WHERE onestop_feed_id = $1
+            AND route_id LIKE $2
+            AND service_id LIKE $3
+            AND trip_id LIKE $4
+            AND trip_headsign LIKE $5
+            AND trip_short_name LIKE $6
+            AND direction_id LIKE $7
+            AND block_id LIKE $8
+            AND shape_id LIKE $9
+            AND wheelchair_accessible LIKE $10
+            AND bikes_allowed LIKE $11";
+        let results = client
+            .query(stmt,&[
+                &onestop_feed_id,
+                &qs.get("route_id").unwrap_or("%"),
+                &qs.get("service_id").unwrap_or("%"),
+                &qs.get("trip_id").unwrap_or("%"),
+                &qs.get("trip_headsign").unwrap_or("%"),
+                &qs.get("trip_short_name").unwrap_or("%"),
+                &qs.get("direction_id").unwrap_or("%"),
+                &qs.get("block_id").unwrap_or("%"),
+                &qs.get("shape_id").unwrap_or("%"),
+                &qs.get("wheelchair_accessible").unwrap_or("%"),
+                &qs.get("bikes_allowed").unwrap_or("%")
+            ])
+            .await?
+            .iter()
+            .map(|row| Trip {
+                id: row.get("trip_id"),
+                service_id: row.get("service_id"),
+                route_id: row.get("route_id"),
+                stop_times: vec![],
+                shape_id: row.get("shape_id"),
+                trip_headsign: row.get("trip_headsign"),
+                trip_short_name: row.get("trip_short_name"),
+                direction_id: match row.get("direction_id") {
+                    Some(0) => Some(DirectionType::Outbound),
+                    Some(1) => Some(DirectionType::Inbound),
+                    _ => None,
+                },
+                block_id: row.get("block_id"),
+                wheelchair_accessible: availability_from_i32(row.get("wheelchair_accessible")),
+                bikes_allowed: match row.get("bikes_allowed") {
+                    0 => BikesAllowedType::NoBikeInfo,
+                    1 => BikesAllowedType::AtLeastOneBike,
+                    2 => BikesAllowedType::NoBikesAllowed,
+                    i => BikesAllowedType::Unknown(i),
+                },
+                frequencies: vec![],
+            })
+            .collect::<Vec<Trip>>();
+        
+        Ok(results)
+    }
 }
 
 mod handlers {
@@ -284,13 +344,24 @@ mod handlers {
             Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
         }
     }
+
+    pub async fn trips(path: web::Path<String>, db_pool: web::Data<Pool>, req: HttpRequest) -> impl Responder {
+        let qs = QString::from(req.query_string());
+        let onestop_feed_id = path.into_inner();
+        let client: Client = db_pool.get().await.map_err(MyError::PoolError).unwrap();
+        match db::trips(&client, onestop_feed_id.clone(), qs).await {
+            Ok(res) => HttpResponse::Ok().json(res),
+            Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
+        }
+    }
 }
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware::DefaultHeaders, web, App, HttpServer};
 use deadpool_postgres::{Manager, ManagerConfig, Pool, RecyclingMethod};
+use gtfs_structures::Availability;
 use rgb::Rgb;
 use tokio_postgres::NoTls;
-use handlers::{agency, index, routes, stops};
+use handlers::{agency, index, routes, stops, trips};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -323,10 +394,9 @@ async fn main() -> std::io::Result<()> {
         .service(web::resource("/gtfs/{onestop_feed_id}/stops").route(web::get().to(stops)))
         .service(web::resource("/gtfs/{onestop_feed_id}/routes/").route(web::get().to(routes)))
         .service(web::resource("/gtfs/{onestop_feed_id}/routes").route(web::get().to(routes)))
-        /*
         .service(web::resource("/gtfs/{onestop_feed_id}/trips/").route(web::get().to(trips)))
         .service(web::resource("/gtfs/{onestop_feed_id}/trips").route(web::get().to(trips)))
-        .service(web::resource("/gtfs/{onestop_feed_id}/stop_times/").route(web::get().to(stop_times)))
+        /*.service(web::resource("/gtfs/{onestop_feed_id}/stop_times/").route(web::get().to(stop_times)))
         .service(web::resource("/gtfs/{onestop_feed_id}/stop_times").route(web::get().to(stop_times)))
         .service(web::resource("/gtfs/{onestop_feed_id}/attributions/").route(web::get().to(attributions)))
         .service(web::resource("/gtfs/{onestop_feed_id}/attributions").route(web::get().to(attributions)))
