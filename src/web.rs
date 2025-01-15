@@ -110,9 +110,9 @@ async fn main() -> std::io::Result<()> {
         .app_data(web::Data::new(pool.clone())).service(web::resource("/").route(web::get().to(index)))
         .service(web::resource("/gtfs/{onestop_feed_id}/agency/").route(web::get().to(agency)))
     })
-    .bind("127.0.0.1:6969")?
+    .bind("127.0.0.1:16969")?
     .run();
-    println!("Server running at http://127.0.0.1:6969/");
+    println!("Server running at http://127.0.0.1:16969/");
 
     server.await
 }
