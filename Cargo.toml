@@ -28,6 +28,7 @@ deadpool-postgres = { version = "0.14", features = ["serde"] }
 tokio-pg-mapper = { version = "0.2.0", features = ["tokio-pg-mapper-derive"] }
 tokio-pg-mapper-derive = "0.2.0"
 qstring = "0.7.2"
+rgb = "0.8.50"
 
 [[bin]]
 name = "download"

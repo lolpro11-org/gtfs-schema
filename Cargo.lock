@@ -1203,6 +1203,7 @@ dependencies = [
  "qstring",
  "regress",
  "reqwest",
+ "rgb",
  "serde",
  "serde_derive",
  "serde_json",
