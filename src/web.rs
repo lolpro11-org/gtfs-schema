@@ -88,9 +88,10 @@ use handlers::{index, agency};
 async fn main() -> std::io::Result<()> {
 
     let mut pg_config = tokio_postgres::Config::new();
-    pg_config.host_path("/run/postgresql");
-    pg_config.host_path("/tmp");
+    //postgresql://postgres:password@localhost/postgres
     pg_config.user("postgres");
+    pg_config.password("password");
+    pg_config.host("localhost");
     pg_config.dbname("postgres");
     let mgr_config = ManagerConfig {
         recycling_method: RecyclingMethod::Fast
