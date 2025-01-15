@@ -47,15 +47,34 @@ mod errors {
 mod db {
     use deadpool_postgres::Client;
     use gtfs_structures::{Agency, Availability, ContinuousPickupDropOff, LocationType, Route, RouteType, Stop};
+    use qstring::QString;
 
     use crate::{errors::MyError, parse_rgb_string};
 
-    pub async fn agency(client: &Client, onestop_feed_id: String) -> Result<Vec<Agency>, MyError> {
+    pub async fn agency(client: &Client, onestop_feed_id: String, qs: QString) -> Result<Vec<Agency>, MyError> {
         let stmt = "SELECT * 
         FROM gtfs.agency 
-        WHERE onestop_feed_id LIKE $1";
+        WHERE onestop_feed_id = $1
+            AND agency_id LIKE $2
+            AND agency_name LIKE $3
+            AND agency_url LIKE $4
+            AND agency_timezone LIKE $5
+            AND agency_lang LIKE $6
+            AND agency_phone LIKE $7
+            AND agency_fare_url LIKE $8
+            AND agency_email LIKE $9";
         let results = client
-            .query(stmt,&[&onestop_feed_id])
+            .query(stmt,&[
+                &onestop_feed_id, 
+                &qs.get("agency_id").unwrap_or("%"),
+                &qs.get("agency_name").unwrap_or("%"),
+                &qs.get("agency_url").unwrap_or("%"),
+                &qs.get("agency_timezone").unwrap_or("%"),
+                &qs.get("agency_lang").unwrap_or("%"),
+                &qs.get("agency_phone").unwrap_or("%"),
+                &qs.get("agency_fare_url").unwrap_or("%"),
+                &qs.get("agency_email").unwrap_or("%")
+            ])
             .await?
             .iter()
             .map(|row| Agency {
@@ -73,12 +92,44 @@ mod db {
         Ok(results)
     }
 
-    pub async fn stops(client: &Client, onestop_feed_id: String) -> Result<Vec<Stop>, MyError> {
+    pub async fn stops(client: &Client, onestop_feed_id: String, qs: QString) -> Result<Vec<Stop>, MyError> {
         let stmt = "SELECT * 
         FROM gtfs.stops 
-        WHERE onestop_feed_id LIKE $1";
+        WHERE onestop_feed_id = $1
+            AND stop_id LIKE $2
+            AND stop_code LIKE $3
+            AND stop_name LIKE $4
+            AND tts_stop_name LIKE $5
+            AND stop_desc LIKE $6
+            AND stop_lat LIKE $7
+            AND stop_lon LIKE $8
+            AND zone_id LIKE $9
+            AND stop_url LIKE $10
+            AND location_type LIKE $11
+            AND parent_station LIKE $12
+            AND stop_timezone LIKE $13
+            AND wheelchair_boarding LIKE $14
+            AND level_id LIKE $15
+            AND platform_code LIKE $16";
         let results = client
-            .query(stmt,&[&onestop_feed_id])
+            .query(stmt,&[
+                &onestop_feed_id,
+                &qs.get("stop_id").unwrap_or("%"),
+                &qs.get("stop_code").unwrap_or("%"),
+                &qs.get("stop_name").unwrap_or("%"),
+                &qs.get("tts_stop_name").unwrap_or("%"),
+                &qs.get("stop_desc").unwrap_or("%"),
+                &qs.get("stop_lat").unwrap_or("%"),
+                &qs.get("stop_lon").unwrap_or("%"),
+                &qs.get("zone_id").unwrap_or("%"),
+                &qs.get("stop_url").unwrap_or("%"),
+                &qs.get("location_type").unwrap_or("%"),
+                &qs.get("parent_station").unwrap_or("%"),
+                &qs.get("stop_timezone").unwrap_or("%"),
+                &qs.get("wheelchair_boarding").unwrap_or("%"),
+                &qs.get("level_id").unwrap_or("%"),
+                &qs.get("platform_code").unwrap_or("%")
+            ])
             .await?
             .iter()
             .map(|row| Stop {
@@ -117,12 +168,38 @@ mod db {
         Ok(results)
     }
 
-    pub async fn routes(client: &Client, onestop_feed_id: String) -> Result<Vec<Route>, MyError> {
+    pub async fn routes(client: &Client, onestop_feed_id: String, qs: QString) -> Result<Vec<Route>, MyError> {
         let stmt = "SELECT * 
         FROM gtfs.routes 
-        WHERE onestop_feed_id LIKE $1";
+        WHERE onestop_feed_id = $1
+            AND route_id LIKE $2
+            AND agency_id LIKE $3
+            AND route_short_name LIKE $4
+            AND route_long_name LIKE $5
+            AND route_desc LIKE $6
+            AND route_type LIKE $7
+            AND route_url LIKE $8
+            AND route_color LIKE $9
+            AND route_text_color LIKE $10
+            AND route_sort_order LIKE $11
+            AND continuous_pickup LIKE $12
+            AND continuous_drop_off LIKE $13";
         let results = client
-            .query(stmt,&[&onestop_feed_id])
+            .query(stmt,&[
+                &onestop_feed_id,
+                &qs.get("route_id").unwrap_or("%"),
+                &qs.get("agency_id").unwrap_or("%"),
+                &qs.get("route_short_name").unwrap_or("%"),
+                &qs.get("route_long_name").unwrap_or("%"),
+                &qs.get("route_desc").unwrap_or("%"),
+                &qs.get("route_type").unwrap_or("%"),
+                &qs.get("route_url").unwrap_or("%"),
+                &qs.get("route_color").unwrap_or("%"),
+                &qs.get("route_text_color").unwrap_or("%"),
+                &qs.get("route_sort_order").unwrap_or("%"),
+                &qs.get("continuous_pickup").unwrap_or("%"),
+                &qs.get("continuous_drop_off").unwrap_or("%")
+            ])
             .await?
             .iter()
             .map(|row| Route {
@@ -178,28 +255,31 @@ mod handlers {
     pub async fn index() -> impl Responder {
         HttpResponse::Ok().body("Ok")
     }
-    pub async fn agency(path: web::Path<String>, db_pool: web::Data<Pool>, _req: HttpRequest) -> impl Responder {
+    pub async fn agency(path: web::Path<String>, db_pool: web::Data<Pool>, req: HttpRequest) -> impl Responder {
+        let qs = QString::from(req.query_string());
         let onestop_feed_id = path.into_inner();
         let client: Client = db_pool.get().await.map_err(MyError::PoolError).unwrap();
-        match db::agency(&client, onestop_feed_id.clone()).await {
+        match db::agency(&client, onestop_feed_id.clone(), qs).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
         }
     }
 
-    pub async fn stops(path: web::Path<String>, db_pool: web::Data<Pool>, _req: HttpRequest) -> impl Responder {
+    pub async fn stops(path: web::Path<String>, db_pool: web::Data<Pool>, req: HttpRequest) -> impl Responder {
+        let qs = QString::from(req.query_string());
         let onestop_feed_id = path.into_inner();
         let client: Client = db_pool.get().await.map_err(MyError::PoolError).unwrap();
-        match db::stops(&client, onestop_feed_id.clone()).await {
+        match db::stops(&client, onestop_feed_id.clone(), qs).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
         }
     }
 
-    pub async fn routes(path: web::Path<String>, db_pool: web::Data<Pool>, _req: HttpRequest) -> impl Responder {
+    pub async fn routes(path: web::Path<String>, db_pool: web::Data<Pool>, req: HttpRequest) -> impl Responder {
+        let qs = QString::from(req.query_string());
         let onestop_feed_id = path.into_inner();
         let client: Client = db_pool.get().await.map_err(MyError::PoolError).unwrap();
-        match db::routes(&client, onestop_feed_id.clone()).await {
+        match db::routes(&client, onestop_feed_id.clone(), qs).await {
             Ok(res) => HttpResponse::Ok().json(res),
             Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
         }
