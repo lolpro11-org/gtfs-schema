@@ -72,9 +72,9 @@ mod handlers {
     pub async fn agency(path: web::Path<String>, db_pool: web::Data<Pool>, _req: HttpRequest) -> impl Responder {
         let onestop_feed_id = path.into_inner();
         let client: Client = db_pool.get().await.map_err(MyError::PoolError).unwrap();
-        match db::agency(&client, onestop_feed_id).await {
+        match db::agency(&client, onestop_feed_id.clone()).await {
             Ok(res) => HttpResponse::Ok().json(res),
-            Err(_) => HttpResponse::NotFound().into(),
+            Err(_) => HttpResponse::NotFound().body(format!("{} feed_id not found", onestop_feed_id)).into(),
         }
     }
 }
