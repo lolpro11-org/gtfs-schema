@@ -31,10 +31,6 @@ async fn main() {
             mvt bytea;
             tile_envelope geometry;
         BEGIN
-            IF x < 0 OR x >= (1 << z) OR y < 0 OR y >= (1 << z) THEN
-                RETURN NULL;
-            END IF;
-
             tile_envelope := ST_TileEnvelope(z, x, y);
 
             SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom')
