@@ -24,7 +24,7 @@ async fn main() {
                 SELECT
                     ST_AsMVTGeom(
                         ST_Transform(
-                            s.shape_linestring
+                            s.shape_linestring,
                             3857
                         ),
                         tile_envelope,
