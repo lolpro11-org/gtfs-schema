@@ -11,20 +11,6 @@ async fn main() {
         }
     });
     client.batch_execute("
-        CREATE OR REPLACE FUNCTION simplification_tolerance(z integer)
-        RETURNS float AS $$
-        BEGIN
-            -- Coarser simplification at lower zooms
-            RETURN CASE
-                WHEN z <= 6 THEN 0.01
-                WHEN z <= 9 THEN 0.001
-                WHEN z <= 12 THEN 0.0001
-                ELSE 0.00001
-            END;
-        END;
-        $$ LANGUAGE plpgsql IMMUTABLE STRICT;
-    ").await.unwrap();
-    client.batch_execute("
         CREATE OR REPLACE FUNCTION gtfs.shapes(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
@@ -38,7 +24,7 @@ async fn main() {
                 SELECT
                     ST_AsMVTGeom(
                         ST_Transform(
-                            s.shape_linestring --ST_SimplifyPreserveTopology(s.shape_linestring, simplification_tolerance(z)),
+                            s.shape_linestring
                             3857
                         ),
                         tile_envelope,
