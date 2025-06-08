@@ -17,33 +17,24 @@ async fn main() {
         DECLARE
             mvt bytea;
         BEGIN
-            -- Ensure tile coordinates are valid
             IF x < 0 OR x >= (1 << z) OR y < 0 OR y >= (1 << z) THEN
                 RETURN NULL;
             END IF;
 
-            -- Build and return MVT tile
             SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom')
             FROM (
                 SELECT
                     ST_AsMVTGeom(
-                        ST_Transform(shape_linestring, 3857),
+                        ST_Transform(s.shape_linestring, 3857),
                         ST_TileEnvelope(z, x, y),
                         4096, 64, true
                     ) AS geom,
                     s.onestop_feed_id,
                     s.shape_id,
-                    r.route_id,
-                    r.route_short_name,
-                    r.route_long_name,
-                    r.route_type,
-                    r.route_color,
-                    r.route_text_color,
-                    a.agency_id,
-                    a.agency_name
+                    r.route_color
                 FROM gtfs.shapes s
-                JOIN gtfs.routes r ON r.route_id = s.shape_id -- adjust if shape_id != route_id
-                LEFT JOIN gtfs.agency a ON a.agency_id = r.agency_id
+                JOIN gtfs.trips t ON s.shape_id = t.shape_id
+                JOIN gtfs.routes r ON t.route_id = r.route_id
                 WHERE s.shape_linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)
             ) AS tile
             WHERE geom IS NOT NULL;
@@ -51,8 +42,7 @@ async fn main() {
             RETURN mvt;
         END
         $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
-        ").await.unwrap();
-
+    ").await.unwrap();
 
     client.batch_execute("
         CREATE OR REPLACE
