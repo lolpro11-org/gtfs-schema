@@ -38,7 +38,7 @@ async fn main() {
                 SELECT
                     ST_AsMVTGeom(
                         ST_Transform(
-                            ST_SimplifyPreserveTopology(s.shape_linestring, simplification_tolerance(z)),
+                            s.shape_linestring --ST_SimplifyPreserveTopology(s.shape_linestring, simplification_tolerance(z)),
                             3857
                         ),
                         tile_envelope,
