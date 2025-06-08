@@ -10,23 +10,42 @@ async fn main() {
             eprintln!("connection error: {}", e);
         }
     });
-
+    client.batch_execute("
+        CREATE OR REPLACE FUNCTION simplification_tolerance(z integer)
+        RETURNS float AS $$
+        BEGIN
+            -- Coarser simplification at lower zooms
+            RETURN CASE
+                WHEN z <= 6 THEN 0.01
+                WHEN z <= 9 THEN 0.001
+                WHEN z <= 12 THEN 0.0001
+                ELSE 0.00001
+            END;
+        END;
+        $$ LANGUAGE plpgsql IMMUTABLE STRICT;
+    ").await.unwrap();
     client.batch_execute("
         CREATE OR REPLACE FUNCTION gtfs.shapes(z integer, x integer, y integer)
         RETURNS bytea AS $$
         DECLARE
             mvt bytea;
+            tile_envelope geometry;
         BEGIN
             IF x < 0 OR x >= (1 << z) OR y < 0 OR y >= (1 << z) THEN
                 RETURN NULL;
             END IF;
 
+            tile_envelope := ST_TileEnvelope(z, x, y);
+
             SELECT INTO mvt ST_AsMVT(tile, 'shapes', 4096, 'geom')
             FROM (
                 SELECT
                     ST_AsMVTGeom(
-                        ST_Transform(s.shape_linestring, 3857),
-                        ST_TileEnvelope(z, x, y),
+                        ST_Transform(
+                            ST_SimplifyPreserveTopology(s.shape_linestring, simplification_tolerance(z)),
+                            3857
+                        ),
+                        tile_envelope,
                         4096, 64, true
                     ) AS geom,
                     s.onestop_feed_id,
@@ -35,7 +54,7 @@ async fn main() {
                 FROM gtfs.shapes s
                 JOIN gtfs.trips t ON s.shape_id = t.shape_id
                 JOIN gtfs.routes r ON t.route_id = r.route_id
-                WHERE s.shape_linestring && ST_Transform(ST_TileEnvelope(z, x, y), 4326)
+                WHERE s.shape_linestring && ST_Transform(tile_envelope, 4326)
             ) AS tile
             WHERE geom IS NOT NULL;
 
