@@ -53,14 +53,14 @@
               "static_current": {
                 "type": "string",
                 "description": "URL (in Transitland Extended URL format) for the static feed that represents today's service. (Has the same meaning as url.)",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               },
               "static_historic": {
                 "type": "array",
                 "items": {
                   "type": "string",
                   "description": "URLs (in Transitland Extended URL format) for static feeds that represent past service that is no longer in effect.",
-                  "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                  "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
                 }
               },
               "static_planned": {
@@ -68,7 +68,7 @@
                 "items": {
                   "type": "string",
                   "description": "URLs (in Transitland Extended URL format) for static feeds that represent service planned for upcoming dates. Typically used to represent calendar/service changes that will take effect few weeks or months in the future.",
-                  "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                  "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
                 }
               },
               "static_hypothetical": {
@@ -76,33 +76,33 @@
                 "items": {
                   "type": "string",
                   "description": "URLs (in Transitland Extended URL format) for static feeds that represent potential service or network changes. Typically used to represent scenarios that may (or may not) take effect months or years in the future.",
-                  "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                  "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
                 }
               },
               "realtime_vehicle_positions": {
                 "type": "string",
                 "description": "URL for GTFS Realtime VehiclePosition messages.",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               },
               "realtime_trip_updates": {
                 "type": "string",
                 "description": "URL for GTFS Realtime TripUpdate messages.",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               },
               "realtime_alerts": {
                 "type": "string",
                 "description": "URL for GTFS Realtime Alert messages.",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               },
               "gbfs_auto_discovery": {
                 "type": "string",
                 "description": "Auto-discovery file in JSON format that links to all of the other GBFS files published by the system.",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               },
               "mds_provider": {
                 "type": "string",
                 "description": "MDS provider API endpoints are intended to be implemented by mobility providers and consumed by regulatory agencies.",
-                "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+                "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
               }
             }
           },
@@ -795,7 +795,7 @@
           "website": {
             "type": "string",
             "description": "URL for the operator's public website.",
-            "pattern": "^(http|https|ftp):\\/\\/[\\p{L}\\p{N}.,~#{}():&\\/%='?_/-]+$"
+            "pattern": "^(http|https|ftp):\\/\\/[\\x21-\\x7E\\u00A0-\\uFFFF]+$"
   
           },
           "associated_feeds": {

@@ -56,6 +56,7 @@ async fn main() {
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
             let json = fs::read_to_string(&path).await.unwrap();
+            println!("{:?}", path);
             let domain: DistributedMobilityFeedRegistry = serde_json::from_str(&json).unwrap();
             for feed in domain.feeds {
                 if feed.spec == FeedSpec::Gtfs {
